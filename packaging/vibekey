@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+cd /usr/lib/vibekey
+exec /usr/bin/python3 -m vibekey "$@"
+

@@ -1,0 +1,16 @@
+[Unit]
+Description=VibeKey AU05 userspace driver and local configuration UI
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vibekey
+EnvironmentFile=-%h/.config/vibekey/service.env
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=12
+UMask=0077
+# Device access and the per-user desktop session are needed. Do not add
+# PrivateDevices or a system/root service here.
+

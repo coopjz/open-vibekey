@@ -1,0 +1,6 @@
+# Scope reads/grabs to AU05. Apply before 73-seat-late.rules evaluates uaccess.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="fff1", ATTRS{idProduct}=="00dd", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="fff1", ATTRS{idProduct}=="00dd", TAG+="uaccess"
+# uinput creates virtual input; grant only via an explicit dedicated group.
+SUBSYSTEM=="misc", KERNEL=="uinput", GROUP="vibekey-input", MODE="0660"
+

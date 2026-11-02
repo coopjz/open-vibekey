@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+if [ "$1" = configure ]; then
+    if ! getent group vibekey-input >/dev/null; then
+        addgroup --system vibekey-input
+    fi
+    modprobe uinput || true
+    udevadm control --reload-rules || true
+    udevadm trigger --subsystem-match=misc --sysname-match=uinput || true
+    echo "VibeKey installed. Add your desktop user to vibekey-input, log out/in, and reconnect AU05."
+    echo "Example: sudo usermod -aG vibekey-input YOUR_USER"
+fi
+

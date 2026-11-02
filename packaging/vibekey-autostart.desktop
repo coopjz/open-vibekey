@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=VibeKey background service
+Comment=Start VibeKey in the graphical user session
+Exec=/usr/bin/vibekey-session
+Icon=input-keyboard
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+

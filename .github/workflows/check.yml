@@ -1,0 +1,31 @@
+name: Check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: ["ubuntu:20.04", "ubuntu:22.04", "ubuntu:24.04"]
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test runtime
+        run: |
+          apt-get update
+          apt-get install -y python3 dpkg-dev
+      - name: Core and API tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Build distribution
+        run: sh scripts/build-deb.sh
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/model.test.mjs
+      - run: node --input-type=module --check < web/app.js
+      - run: node --check web/editors.mjs && node --check web/i18n.mjs && node --check web/model.mjs

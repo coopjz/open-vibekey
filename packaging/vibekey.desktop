@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=VibeKey
+Comment=Configure the Ulanzi AU05 VibeKey
+Exec=/usr/bin/vibekey-open
+Icon=input-keyboard
+Terminal=false
+Categories=Settings;HardwareSettings;
+StartupNotify=false
+

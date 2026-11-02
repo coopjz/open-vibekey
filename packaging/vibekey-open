@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+/usr/bin/vibekey-session
+exec /usr/bin/python3 -c '
+import time
+import urllib.request
+import webbrowser
+for attempt in range(40):
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:8765/api/state", timeout=0.3) as response:
+            response.read()
+        break
+    except OSError:
+        time.sleep(0.1)
+else:
+    raise SystemExit("VibeKey unavailable; run: journalctl --user -u vibekey")
+webbrowser.open("http://127.0.0.1:8765")
+'
+

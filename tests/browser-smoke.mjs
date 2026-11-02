@@ -1,0 +1,246 @@
+// Optional integration test: Node 22+ and a locally installed Chrome.
+// Runs against an isolated simulated daemon; never grabs or injects real input.
+import assert from "node:assert/strict";
+import {spawn} from "node:child_process";
+import {mkdtemp, readFile, rm, mkdir, writeFile} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join, resolve} from "node:path";
+import {setTimeout as delay} from "node:timers/promises";
+
+const directory = await mkdtemp(join(tmpdir(), "vibekey-ui-test-"));
+const children = [];
+let socket;
+const errors = [];
+async function until(fn, description, attempts=150) {
+  for (let i=0; i<attempts; i++) {
+    try { const result=await fn(); if(result) return result; } catch {}
+    await delay(100);
+  }
+  throw new Error("Timed out: "+description);
+}
+function child(command, args) {
+  const process=spawn(command,args,{cwd:resolve("."),stdio:["ignore","pipe","pipe"]});
+  children.push(process);
+  let stderr="";
+  process.stderr.on("data",data=>{stderr=(stderr+data).slice(-8000);});
+  process.on("error",error=>errors.push(error.message));
+  process.stderrText=()=>stderr;
+  return process;
+}
+try {
+  const daemon=child(process.env.PYTHON || "/usr/bin/python3",
+    ["-m","vibekey","--simulate","--port","0","--config",join(directory,"config.json")]);
+  let output="";
+  daemon.stdout.on("data",data=>{output+=data;});
+  const port=await until(()=>output.match(/127\.0\.0\.1:(\d+)/)?.[1],"simulated daemon startup");
+  const origin="http://127.0.0.1:"+port;
+  const browser=child(process.env.CHROME || "/usr/bin/google-chrome",
+    ["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-first-run",
+      "--no-default-browser-check","--remote-debugging-port=0",
+      "--user-data-dir="+join(directory,"chrome"),"about:blank"]);
+  const debugPort=await until(async()=>(await readFile(join(directory,"chrome","DevToolsActivePort"),"utf8")).split("\n")[0],
+    "Chrome debugging endpoint");
+  const pages=await (await fetch("http://127.0.0.1:"+debugPort+"/json")).json();
+  socket=new WebSocket(pages.find(page=>page.type==="page").webSocketDebuggerUrl);
+  await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject;});
+  let nextId=0;
+  const pending=new Map(), exceptions=[];
+  socket.onmessage=event=>{
+    const message=JSON.parse(event.data);
+    if(message.method==="Runtime.exceptionThrown") exceptions.push(message.params.exceptionDetails);
+    if(message.id) {
+      const pair=pending.get(message.id);
+      pending.delete(message.id);
+      if(message.error) pair.reject(new Error(JSON.stringify(message.error)));
+      else pair.resolve(message.result);
+    }
+  };
+  function cdp(method,params={}) {
+    return new Promise((resolve,reject)=>{
+      const id=++nextId;
+      pending.set(id,{resolve,reject});
+      socket.send(JSON.stringify({id,method,params}));
+    });
+  }
+  async function evaluate(expression) {
+    const result=await cdp("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});
+    if(result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+    return result.result.value;
+  }
+  await cdp("Runtime.enable");
+  await cdp("Emulation.setDeviceMetricsOverride",{width:1280,height:1000,deviceScaleFactor:1,mobile:false});
+  await cdp("Page.navigate",{url:origin});
+  await until(()=>evaluate('document.getElementById("connection")?.textContent.includes("模拟模式")'),
+    "UI initialization");
+  assert.match(await evaluate('document.getElementById("dirty").textContent'),/配置已加载/);
+  // Exercise the real binding editor, persistence, and simulated event stream.
+  await evaluate(`(()=>{
+    const select=document.querySelector("#bindings select");
+    select.value="shortcut";select.dispatchEvent(new Event("change"));
+    const edit=document.querySelector('#bindings input[aria-label="快捷键"]');
+    edit.value="CTRL+SHIFT+T";
+    edit.dispatchEvent(new Event("change"));
+    document.getElementById("save").click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"configuration save");
+  const config=await (await fetch(origin+"/api/config")).json();
+  assert.equal(config.profiles.default.layers[0].bindings.top.single.keys,"CTRL+SHIFT+T");
+  const {token}=await (await fetch(origin+"/api/state")).json();
+  for (const pressed of [true,false]) {
+    const response=await fetch(origin+"/api/simulate",{method:"POST",headers:{
+      "Content-Type":"application/json","X-VibeKey-Token":token
+    },body:JSON.stringify({control:"top",pressed})});
+    assert.equal(response.status,200);
+  }
+  await until(()=>evaluate('document.getElementById("events").textContent.includes("simulated_action")'),
+    "SSE action feedback");
+  // Editing selection must not mask a change in physical rotation direction.
+  await evaluate('document.querySelector(\'[data-control="cw"]\').click()');
+  for (const [control,count] of [["cw",10],["ccw",5]]) {
+    for (let index=0;index<count;index++) {
+      const response=await fetch(origin+"/api/simulate",{method:"POST",headers:{
+        "Content-Type":"application/json","X-VibeKey-Token":token
+      },body:JSON.stringify({control,pressed:true})});
+      assert.equal(response.status,200);
+    }
+  }
+  await until(()=>evaluate('document.getElementById("ccw-count").textContent==="5"'),
+    "rotation direction feedback");
+  assert.equal(await evaluate('document.getElementById("cw-count").textContent'),"10");
+  assert.match(await evaluate('document.getElementById("last-input").textContent'),/逆时针/);
+  assert.equal(await evaluate('document.querySelector(\'[data-control="cw"]\').classList.contains("selected")'),true);
+  await evaluate('document.getElementById("reset-input").click()');
+  assert.equal(await evaluate('document.getElementById("cw-count").textContent'),"0");
+  assert.equal(await evaluate('document.getElementById("ccw-count").textContent'),"0");
+  // Select a gesture from the overview, assign a key, and set repeat output.
+  await evaluate(`(()=>{
+    document.querySelector('[data-gesture-control="knob"][data-gesture="double"]').click();
+    document.querySelector('[data-category="字符"]').click();
+    document.querySelector('[data-key="A"]').click();
+    const repeat=document.querySelector('[aria-label="重复次数"]');
+    repeat.value="3";repeat.dispatchEvent(new Event("change"));
+  })()`);
+  assert.equal(await evaluate('document.getElementById("gesture-title").textContent'),"双击");
+  await evaluate('document.getElementById("save").click()');
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"repeated shortcut save");
+  let saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.profiles.default.layers[0].bindings.knob.double.repeat,3);
+  // Native keyboard recording is scoped to the active recorder.
+  await evaluate(`document.querySelector('#bindings button[aria-label="录制快捷键"]').click()`);
+  await cdp("Input.dispatchKeyEvent",{type:"keyDown",key:"k",code:"KeyK",modifiers:2});
+  await cdp("Input.dispatchKeyEvent",{type:"keyUp",key:"k",code:"KeyK",modifiers:2});
+  assert.equal(await evaluate('document.querySelector(\'#bindings input[aria-label="快捷键"]\').value'),"CTRL+K");
+  // Create an application library entry through the actual dialog, then assign.
+  await evaluate(`(()=>{
+    document.querySelector('[data-category="APP"]').click();
+    [...document.querySelectorAll("#palette-content button")].find(b=>b.textContent.includes("添加 APP")).click();
+  })()`);
+  await until(()=>evaluate('document.querySelector("#library-editor .field-stack input")!==null'),"application editor");
+  await evaluate(`(()=>{
+    document.getElementById("library-name").value="Test terminal";
+    const executable=document.querySelector("#library-editor .field-stack input");
+    executable.value="/usr/bin/true";executable.dispatchEvent(new Event("change"));
+    document.getElementById("library-form").requestSubmit();
+  })()`);
+  await until(()=>evaluate('!document.getElementById("library-dialog").open'),"application library save");
+  await evaluate('document.querySelector(".library-assign").click()');
+  // Create a macro, reorder its steps, round-trip Code and assign it.
+  await evaluate(`(()=>{
+    document.querySelector('[data-category="宏"]').click();
+    [...document.querySelectorAll("#palette-content button")].find(b=>b.textContent.includes("新建宏")).click();
+    document.getElementById("library-name").value="Test macro";
+    [...document.querySelectorAll("#library-editor .inline-actions button")].find(b=>b.textContent.includes("组合键")).click();
+    [...document.querySelectorAll("#library-editor .inline-actions button")].find(b=>b.textContent.includes("等待")).click();
+    document.querySelector('[aria-label="上移步骤 2"]').click();
+    [...document.querySelectorAll(".macro-code-tabs button")].find(b=>b.textContent==="Code").click();
+  })()`);
+  assert.match(await evaluate('document.querySelector(".code-editor").value'),/^wait_ms\(500\);/);
+  await evaluate(`(()=>{
+    [...document.querySelectorAll(".macro-code-tabs button")].find(b=>b.textContent==="可视化").click();
+    document.getElementById("library-form").requestSubmit();
+  })()`);
+  await until(()=>evaluate('!document.getElementById("library-dialog").open'),"macro library save");
+  await evaluate('document.querySelector(".library-assign").click()');
+  await evaluate('document.getElementById("save").click()');
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"library persistence");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.library.applications[0].name,"Test terminal");
+  assert.equal(saved.library.macros[0].action.steps[0].delay_ms,500);
+  assert.equal(saved.profiles.default.layers[0].bindings.knob.double.type,"macro");
+  // Save a layer inheritance action without activating it.
+  await evaluate(`(()=>{
+    document.querySelector('#layer-tabs [aria-label="Layer 1"]').click();
+    document.querySelector('[data-gesture-control="top"][data-gesture="single"]').click();
+    document.querySelector('[data-category="其他"]').click();
+    document.querySelector('[data-key="▽"]').click();
+    document.getElementById("save").click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"inheritance save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.active_layer,0);
+  assert.equal(saved.profiles.default.layers[1].bindings.top.single.type,"inherit");
+  assert.equal(await evaluate('document.getElementById("activation-warning").hidden'),false);
+  assert.equal(await evaluate('document.getElementById("activate").classList.contains("primary")'),true);
+  assert.match(await evaluate('document.getElementById("activation-warning").textContent'),/设备仍使用/);
+  // Switching UI language must preserve the editor and its unsaved draft.
+  await evaluate(`(()=>{
+    document.querySelector('[data-key="文本"]').click();
+    const value=document.querySelector("#bindings textarea");
+    value.value="draft survives language switch";value.dispatchEvent(new Event("change"));
+    document.querySelector('[data-page="settings"]').click();
+    const language=document.getElementById("language");
+    language.value="en";language.dispatchEvent(new Event("change"));
+  })()`);
+  await until(()=>evaluate('document.documentElement.lang==="en" && document.querySelector(\'[data-page="workspace"]\').textContent.includes("Keymap")'),"English interface");
+  await evaluate('document.querySelector(\'[data-page="workspace"]\').click()');
+  assert.equal(await evaluate('document.querySelector("#bindings textarea").value'),"draft survives language switch");
+  await evaluate(`(()=>{
+    document.querySelector('[data-page="settings"]').click();
+    const language=document.getElementById("language");
+    language.value="zh";language.dispatchEvent(new Event("change"));
+    document.querySelector('[data-page="workspace"]').click();
+  })()`);
+  await until(()=>evaluate('document.documentElement.lang==="zh-CN" && document.querySelector(\'[data-page="workspace"]\').textContent.includes("键位")'),"Chinese interface");
+  assert.equal(await evaluate('document.querySelector("#bindings textarea").value'),"draft survives language switch");
+  // Collect rendered previews and verify layout on desktop and mobile.
+  await mkdir(resolve("dist/previews"),{recursive:true});
+  for (const [name,width,height] of [["desktop",1280,1000],["mobile",390,844]]) {
+    await cdp("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+    await delay(150);
+    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,name+" horizontal overflow");
+    const shot=await cdp("Page.captureScreenshot",{format:"png",captureBeyondViewport:true});
+    await writeFile(resolve("dist/previews/workspace-"+name+".png"),Buffer.from(shot.data,"base64"));
+    for (const page of ["voice","settings"]) {
+      await evaluate(`document.querySelector('[data-page="${page}"]').click()`);
+      assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,name+" "+page+" horizontal overflow");
+    }
+    await evaluate('document.querySelector(\'[data-page="workspace"]\').click()');
+  }
+  // Malformed imports must leave the current editor usable.
+  await evaluate(`(()=>{
+    document.getElementById("config-json").value=JSON.stringify({
+      version:1,active_profile:"bad",profiles:{bad:{name:"Broken",layers:[]}}
+    });
+    document.getElementById("apply-json").click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("notice").textContent.includes("配置字段不完整")'),
+    "malformed import feedback");
+  assert.equal(await evaluate('document.getElementById("profile").value'),"default");
+  assert.deepEqual(exceptions,[]);
+  assert.deepEqual(errors,[]);
+  console.log("Browser smoke passed: structured editor, key recorder, gesture overview, repeat, APP/macro library, macro Code/reordering, layers, persistence, SSE, rotation reversal, import recovery, responsive layout");
+  if(browser.exitCode!==null) throw new Error(browser.stderrText());
+} catch(error) {
+  for(const process of children) console.error(process.stderrText());
+  throw error;
+} finally {
+  socket?.close();
+  for(const process of children.reverse()) {
+    if(process.exitCode===null) {
+      process.kill("SIGTERM");
+      await Promise.race([new Promise(resolve=>process.once("exit",resolve)),delay(4000)]);
+      if(process.exitCode===null) process.kill("SIGKILL");
+    }
+  }
+  await rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:100});
+}

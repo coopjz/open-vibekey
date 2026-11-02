@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+# Run inside the graphical login, before starting the user service.
+systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
+exec systemctl --user start vibekey.service
+
