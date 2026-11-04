@@ -1,7 +1,7 @@
 """AU05 report decoding. Standard HID is the default reporting path.
 
 Vendor framing and TEA constants are documented in the upstream references
-listed in THIRD_PARTY.md. No Studio heartbeat or device configuration writes.
+listed in THIRD_PARTY.md. No Studio heartbeat or firmware key-table writes.
 """
 import struct
 
@@ -55,6 +55,8 @@ def vendor_event(report):
         return {"kind": "battery", "millivolts": voltage,
                 "percent": percent if percent <= 100 else None,
                 "charging": bool(plain[10]) if plain[10] in (0, 1) else None}
+    if plain[:4] == b"\x81\x0b\x88\x11" and plain[4:6] == b"\0\0":
+        return {"kind": "lighting", "mode": plain[6], "brightness": plain[7]}
     if plain[:4] == b"\x06\x03\x0a\x11":
         return {"kind": "online", "online": bool(plain[4])}
     return None
@@ -110,3 +112,16 @@ class StandardDecoder:
                 edges.append((signature, True, False))
             self.held[rid] = signature
         return edges + pulses
+
+
+STATUS_QUERIES = (bytes.fromhex("06 03 0a 01"), bytes.fromhex("01 01 02 01"),
+                  bytes.fromhex("01 0b 88 01"))
+
+
+def lighting_commands(mode, brightness):
+    if type(mode) is not int or mode not in (0, 1, 2):
+        raise ValueError("Unknown lighting mode")
+    if type(brightness) is not int or not 0 <= brightness <= 20:
+        raise ValueError("Brightness level must be 0..20")
+    return (bytes([1, 11, 136, 4, 1, 0, mode]),
+            bytes([1, 11, 136, 4, 2, 0, 0, brightness]), STATUS_QUERIES[2])

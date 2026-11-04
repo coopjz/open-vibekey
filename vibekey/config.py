@@ -11,7 +11,7 @@ VERSION = 1
 CONTROLS = ("top", "middle", "bottom", "knob", "cw", "ccw")
 TRIGGERS = ("single", "double", "hold")
 ACTION_TYPES = (
-    "none", "shortcut", "text", "application", "website", "shell", "volume",
+    "none", "shortcut", "text", "application", "website", "shell", "volume", "scroll",
     "macro", "layer", "profile", "momentary_layer", "voice", "inherit",
 )
 
@@ -34,6 +34,7 @@ def default_config():
         "version": VERSION,
         "active_profile": "default", "active_layer": 0,
         "profiles": {"default": {"name": "Default", "layers": layers}},
+        "auto_follow": {"enabled": False, "default_profile": "default", "default_layer": 0, "rules": []},
         "gestures": {"double_ms": 250, "hold_ms": 500},
         "device": {
             "serial": "", "usb_path": "", "grab": True, "input_mode": "standard",
@@ -97,6 +98,8 @@ def validate_action(action, depth=0):
             _string(arg, "argument")
         if "wm_class" in action:
             _string(action["wm_class"], "window class", 256)
+    if kind == "scroll" and action.get("direction") not in ("up", "down"):
+        raise ValueError("Invalid scroll direction")
     if kind == "volume" and action.get("operation") not in ("up", "down", "mute"):
         raise ValueError("Invalid volume operation")
     if kind in ("layer", "momentary_layer"):
@@ -193,6 +196,29 @@ def validate(config):
             for step in action.get("steps", []):
                 if step.get("type") == "profile" and step["id"] not in profiles:
                     raise ValueError("Library macro references missing profile")
+    follow = config.get("auto_follow")
+    if follow is not None:
+        if not isinstance(follow, dict) or set(follow) != {"enabled", "default_profile", "default_layer", "rules"}:
+            raise ValueError("Invalid automatic profile settings")
+        if type(follow["enabled"]) is not bool or follow["default_profile"] not in profiles:
+            raise ValueError("Invalid automatic default profile")
+        if type(follow["default_layer"]) is not int or not 0 <= follow["default_layer"] < 4:
+            raise ValueError("Invalid automatic default layer")
+        if not isinstance(follow["rules"], list) or len(follow["rules"]) > 64:
+            raise ValueError("At most 64 application bindings")
+        rule_ids = set()
+        for rule in follow["rules"]:
+            if not isinstance(rule, dict) or set(rule) != {"id", "name", "wm_class", "title", "role", "profile", "layer"}:
+                raise ValueError("Invalid application binding")
+            for key in ("id", "name", "wm_class", "title", "role"):
+                _string(rule[key], "application " + key, 512)
+            if not rule["id"] or rule["id"] in rule_ids or not rule["name"].strip():
+                raise ValueError("Invalid application binding identity")
+            rule_ids.add(rule["id"])
+            if not any(rule[key].strip() for key in ("wm_class", "title", "role")):
+                raise ValueError("Application binding needs a window class, title or role")
+            if rule["profile"] not in profiles or type(rule["layer"]) is not int or not 0 <= rule["layer"] < 4:
+                raise ValueError("Application binding references missing profile or layer")
     gestures = config.get("gestures", {})
     if not isinstance(gestures, dict):
         raise ValueError("Invalid gesture settings")
@@ -258,6 +284,9 @@ def migrate(config):
             merged = defaults[key]
             merged.update(value.get(key, {}))
             value[key] = merged
+    if "auto_follow" not in value:
+        from .follow import default_settings
+        value["auto_follow"] = default_settings(value.get("active_profile", "default"))
     return validate(value)
 
 

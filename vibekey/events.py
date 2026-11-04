@@ -9,10 +9,10 @@ class EventBus:
         self.clients = set()
         self.sequence = 0
 
-    def publish(self, kind, **data):
+    def publish(self, event_type, **data):
         with self.lock:
             self.sequence += 1
-            event = dict(data, type=kind, id=self.sequence, time=time.time())
+            event = dict(data, type=event_type, id=self.sequence, time=time.time())
             for client in self.clients:
                 try:
                     client.put_nowait(event)

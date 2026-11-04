@@ -4,6 +4,7 @@ import mimetypes
 import queue
 import secrets
 import socket
+import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -89,6 +90,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/state":
                 self._send(200, dict(runtime.state(), token=self.server.token))
+            elif path == "/api/windows":
+                from .follow import windows
+                try:
+                    self._send(200, {"windows": windows()})
+                except (ValueError, OSError, subprocess.TimeoutExpired):
+                    self._send(400, {"error": "暂时无法列出桌面窗口"})
+            elif path == "/api/presets":
+                from .presets import presets
+                self._send(200, presets())
             elif path == "/api/config":
                 with runtime.lock:
                     self._send(200, runtime.store.value)
@@ -127,6 +137,15 @@ class Handler(BaseHTTPRequestHandler):
                 runtime.save(body)
             elif method == "POST" and path == "/api/preview":
                 runtime.preview(body.get("seconds", 15))
+            elif method == "POST" and path == "/api/cli/launch":
+                from .cli_terminal import launch
+                if runtime.simulate:
+                    raise ValueError("模拟模式不启动真实 CLI")
+                launch(body.get("tool"))
+            elif method == "POST" and path == "/api/device/status":
+                runtime.read_device_status()
+            elif method == "POST" and path == "/api/device/lighting":
+                runtime.set_lighting(body.get("mode"), body.get("brightness"))
             elif method == "POST" and path == "/api/device/refresh":
                 runtime.refresh_requested.set()
             elif method == "POST" and path == "/api/cancel":

@@ -1,8 +1,11 @@
-import {controls, actionNames, clone, newAction, setBinding, addProfile, keyGroups, actionLabel, resolveBinding, ensureLibrary, libraryUsage, saveLibraryItem, validShortcut,validateActionDraft} from "/model.mjs";
+import {controls, actionNames, clone, newAction, setBinding, addProfile, keyGroups, actionLabel, resolveBinding, ensureLibrary, libraryUsage, saveLibraryItem, validShortcut,validateActionDraft,activeVoiceBinding} from "/model.mjs";
 import {node,button,option,actionFields,macroEditor,recordShortcut,stopRecorders} from "/editors.mjs";
+import {sceneOverview} from "/scenes.mjs";
+import {followEditor} from "/follow.mjs";
 import {setupLanguage} from "/i18n.mjs";
 
 const $ = id => document.getElementById(id);
+let presetCatalog = {}, lightEditing = false;
 let config, token, state, capabilities, profile, layer = 0, selected = "top";
 let dirty = false, rawSignal = null, previewTimer, refreshTimer, noticeTimer;
 let gesture="single", category="常用", search="", libraryDraft=null, libraryCategory="", macroDraftEditor=null;
@@ -14,6 +17,7 @@ function showPage(page) {
   document.querySelectorAll(".page").forEach(section=>section.hidden=section.id!==page);
   document.querySelectorAll("[data-page]").forEach(item=>item.classList.toggle("current",item.dataset.page===page));
   if(page!=="workspace")ensurePageSave();
+  else if(config)homeScenes.update();
   window.scrollTo(0,0);
 }
 function ensurePageSave() {
@@ -73,9 +77,76 @@ function renderProfiles() {
   });
   $("layer").value=String(layer);$("layer-name").textContent=config.profiles[profile].layers[layer].name;
   renderActivation();
+  followUI.render();
+  homeScenes.render();
+}
+function renderPresets() {
+  $("preset-cards").replaceChildren();
+  for(const [id,preset] of Object.entries(presetCatalog)) {
+    const card=node("article","preset-card"), added=Boolean(config.profiles[id]);
+    card.append(node("span","preset-symbol",id==="codex-cli"?">_":id==="claude-code"?"✳":id.endsWith("default")?"◉":id.endsWith("dispatch")?"↗":"▤"),node("h3","",preset.profile.name),node("p","",preset.description));
+    card.append(button(added?"编辑方案":"添加方案",guarded(()=>{
+      if(!config.profiles[id]) {
+        if(Object.keys(config.profiles).length>=32)throw new Error("最多 32 个方案");
+        const next=clone(preset.profile);
+        if($("preset-voice").checked)next.layers[0].bindings.top=activeVoiceBinding(config);
+        config.profiles[id]=next;changed();
+      }
+      profile=id;layer=0;renderProfiles();renderBindings();renderPresets();showPage("workspace");
+    }),added?"subtle":""));
+    $("preset-cards").append(card);
+  }
+}
+const followUI=followEditor({getConfig:()=>config,getProfile:()=>profile,changed,api,guarded,installCli:()=>{
+  if(Object.keys(config.profiles).length+["codex-cli","claude-code"].filter(id=>!config.profiles[id]).length>32)throw new Error("最多 32 个方案");
+  if(config.auto_follow.rules.length+["vibekey-codex","vibekey-claude"].filter(role=>!config.auto_follow.rules.some(rule=>rule.role===role)).length>64)throw new Error("最多 64 条应用绑定");
+  for(const [id,name,role] of [["codex-cli","Codex CLI","vibekey-codex"],["claude-code","Claude Code","vibekey-claude"]]) {
+    if(!config.profiles[id]){
+      if(Object.keys(config.profiles).length>=32)throw new Error("最多 32 个方案");
+      config.profiles[id]=clone(presetCatalog[id].profile);config.profiles[id].layers[0].bindings.top=activeVoiceBinding(config);
+    }
+    if(!config.auto_follow.rules.some(rule=>rule.role===role)) {
+      if(config.auto_follow.rules.length>=64)throw new Error("最多 64 条应用绑定");
+      config.auto_follow.rules.push({id:"follow-"+id,name,wm_class:"",title:"",role,profile:id,layer:0});
+    }
+  }
+  config.auto_follow.enabled=true;changed();renderProfiles();renderPresets();
+}});
+const homeScenes=sceneOverview({getConfig:()=>config,getState:()=>state,getCapabilities:()=>capabilities,getCatalog:()=>presetCatalog,
+  onSelect:guarded(selectScene),onFollow:guarded(toggleHomeFollow),onDetails:()=>{
+    showPage("settings");$("follow-settings").scrollIntoView({block:"start"});$("follow-settings").focus({preventScroll:true});
+  }
+});
+async function quickSave(mutate) {
+  const previous={config:clone(config),profile,layer,dirty,label:$("dirty").textContent};
+  stopRecorders();
+  try {
+    try {mutate();changed();homeScenes.setBusy(true);await api("/api/config",config,"PUT");}
+    catch(error){({config,profile,layer,dirty}=previous);$("dirty").textContent=previous.label;$("config-json").value=JSON.stringify(config,null,2);throw error;}
+    dirty=false;$("dirty").textContent="已保存";notice("");
+    renderProfiles();renderBindings();renderPresets();await refresh();
+  } finally {homeScenes.setBusy(false);followUI.render();}
+}
+async function selectScene(id) {
+  const wasFollowing=config.auto_follow.enabled;
+  await quickSave(()=>{
+    if(!config.profiles[id]){
+      if(!presetCatalog[id])throw new Error("配置方案不存在");
+      if(Object.keys(config.profiles).length>=32)throw new Error("最多 32 个方案");
+      const next=clone(presetCatalog[id].profile);
+      if($("preset-voice").checked)next.layers[0].bindings.top=activeVoiceBinding(config);
+      config.profiles[id]=next;
+    }
+    profile=id;layer=0;config.active_profile=id;config.active_layer=0;config.auto_follow.enabled=false;
+  });
+  if(wasFollowing)notice("已启用所选预设，自动跟随已关闭");
+}
+async function toggleHomeFollow(enabled) {
+  await quickSave(()=>{config.auto_follow.enabled=enabled;});
 }
 function renderActivation() {
   if(!config)return;
+  $("activate").textContent=config.auto_follow.enabled?"手动启用（关闭跟随）":"启用此方案与层";
   const activeProfile=state?.active_profile ?? config.active_profile;
   const activeLayer=state?.active_layer ?? config.active_layer;
   const different=profile!==activeProfile || layer!==activeLayer;
@@ -303,24 +374,48 @@ async function refresh() {
   renderActivation();
   const battery=state.device.battery;
   $("battery").textContent=battery?.percent!==null&&battery?.percent!==undefined?`${battery.charging?"ϟ ":""}${battery.percent}%`:"电量未知";
+  $("battery-fill").style.width=battery?.percent!=null?battery.percent+"%":"0%";
+  $("battery-status").classList.toggle("low",battery?.percent!=null&&battery.percent<=20);
+  $("battery-status").classList.toggle("charging",Boolean(battery?.charging));
+  $("battery-status").title=battery?`${battery.charging?"充电中":"未充电"} · ${battery.millivolts} mV`:"等待设备电量上报";
   $("device-cards").replaceChildren();
-  for(const [title,value] of [["连接状态",connected?"AU05 已连接":"等待设备"],["设备序列号",state.selected?.serial || "—"],["会话",capabilities.session.toUpperCase()]]){
+  for(const [title,value] of [["连接状态",!connected?"等待设备":state.device.online===false?"设备待机":"AU05 已连接"],["设备序列号",state.selected?.serial || "—"],["电量",battery?.percent!=null?`${battery.percent}%${battery.charging?" · 充电中":""}`:"等待设备上报"]]){
     const card=node("div","device-card");card.append(node("small","",title),node("strong","",value));$("device-cards").append(card);
   }
   $("simulate-input").disabled=!state.simulate;
   if (!state.simulate) $("simulate-input").checked=false;
-  $("session").textContent=`${capabilities.session.toUpperCase()} · Python ${capabilities.languages.core}`;
+  const light=state.device.lighting, available=connected&&state.device.online===true&&!state.simulate;
+  $("apply-light").disabled=!available||!light||state.device.light_operation?.state==="pending";
+  $("light-mode").disabled=!available||!light;
+  $("light-brightness").disabled=!available||!light;
+  $("read-device").disabled=!connected||state.simulate;
+  $("light-status").textContent=state.simulate?"模拟模式":state.device.online===false?"设备待机":light?"已读取设备":"等待设备参数";
+  if(light&&!lightEditing){$("light-mode").value=String(light.mode);$("light-brightness").value=String(light.brightness);}
+  $("light-brightness-value").textContent=light?$("light-brightness").value+" / 20":"—";
+  const operation=state.device.light_operation;
+  if(operation)$("light-feedback").textContent=operation.message;
+  else if(!available)$("light-feedback").textContent=state.simulate?"连接实物后可调节灯效":"请唤醒设备以读取和调节灯效";
   $("diagnostics").textContent=JSON.stringify({capabilities,...state,token:undefined},null,2);
+  followUI.status(state,capabilities);
+  homeScenes.update();
   updateVoice(state.voice);
   if (state.config_error || state.device.error) notice(state.config_error || state.device.error);
 }
 function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer=setTimeout(guarded(refresh),100); }
 async function load() {
   config=await api("/api/config");
+  config.auto_follow ||= {enabled:false,default_profile:config.active_profile,default_layer:0,rules:[]};
   profile=config.active_profile; layer=config.active_layer; dirty=false;ensureLibrary(config);
-  renderProfiles(); renderBindings(); renderForms(); $("dirty").textContent="配置已加载";
+  renderProfiles(); renderBindings(); renderForms();renderPresets(); $("dirty").textContent="配置已加载";
   await refresh();
 }
+$("light-mode").onchange=()=>{lightEditing=true;};
+$("light-brightness").oninput=()=>{lightEditing=true;$("light-brightness-value").textContent=$("light-brightness").value+" / 20";};
+$("read-device").onclick=guarded(async()=>{lightEditing=false;await api("/api/device/status",{});$("light-feedback").textContent="正在读取…";});
+$("apply-light").onclick=guarded(async()=>{
+  await api("/api/device/lighting",{mode:Number($("light-mode").value),brightness:Number($("light-brightness").value)});
+  lightEditing=false;await refresh();
+});
 $("profile").onchange=() => { stopRecorders();profile=$("profile").value; renderProfiles(); renderBindings(); };
 $("layer").onchange=() => { stopRecorders();layer=Number($("layer").value);renderProfiles(); renderBindings(); };
 $("add-profile").onclick=guarded(() => {
@@ -329,6 +424,7 @@ $("add-profile").onclick=guarded(() => {
   addProfile(config,id,name.trim(),profile); profile=id; changed(); renderProfiles(); renderBindings();
 });
 $("delete-profile").onclick=guarded(() => {
+  if(config.auto_follow.default_profile===profile || config.auto_follow.rules.some(rule=>rule.profile===profile))throw new Error("自动跟随仍引用此方案，请先修改绑定或默认方案");
   for(const item of config.library?.macros || [])if(item.action.steps.some(step=>step.type==="profile" && step.id===profile))throw new Error("动作库中的宏仍引用此方案");
   if (Object.keys(config.profiles).length===1) throw new Error("至少保留一个配置方案");
   const old=profile, next=Object.keys(config.profiles).find(id=>id!==old);
@@ -339,10 +435,10 @@ $("delete-profile").onclick=guarded(() => {
     }
   }
   delete config.profiles[old]; if (config.active_profile===old) {config.active_profile=next;config.active_layer=0;}
-  profile=next; changed();renderProfiles();renderBindings();
+  profile=next; changed();renderProfiles();renderBindings();renderPresets();
 });
-$("activate").onclick=guarded(async () => { config.active_profile=profile; config.active_layer=layer; changed(); await save(); });
-async function save() { await api("/api/config",config,"PUT"); dirty=false; $("dirty").textContent="已保存"; notice(""); await refresh(); }
+$("activate").onclick=guarded(async () => { config.active_profile=profile; config.active_layer=layer; config.auto_follow.enabled=false; changed(); await save(); });
+async function save() { await api("/api/config",config,"PUT"); dirty=false; $("dirty").textContent="已保存"; notice(""); await refresh();followUI.render(); }
 $("save").onclick=guarded(save);
 function discard(){if(!dirty || window.confirm("丢弃尚未保存的修改？"))return load();}
 $("reload").onclick=$("discard").onclick=guarded(discard);
@@ -386,7 +482,7 @@ function importConfig(value) {
   if(value?.version!==1 || !value.profiles || !value.profiles[value.active_profile]) throw new Error("配置结构或版本无效；导入支持版本 1");
   const previous = {config,profile,layer};
   try {
-  config=clone(value);ensureLibrary(config);profile=config.active_profile;layer=config.active_layer;
+  config=clone(value);config.auto_follow ||= {enabled:false,default_profile:config.active_profile,default_layer:0,rules:[]};ensureLibrary(config);profile=config.active_profile;layer=config.active_layer;
   renderProfiles();renderBindings();renderForms();
   } catch (error) {
     ({config,profile,layer}=previous);
@@ -416,14 +512,15 @@ document.querySelectorAll("[data-control]").forEach(button=>{
 window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue="";}});
 setupLanguage();
 guarded(async()=>{
-  capabilities=await api("/api/capabilities");await load();ensurePageSave();
+  capabilities=await api("/api/capabilities");presetCatalog=await api("/api/presets");await load();ensurePageSave();
+  if(["workspace","voice","settings"].includes(location.hash.slice(1)))showPage(location.hash.slice(1));
   const stream=new EventSource("/api/events");
   stream.onmessage=event=>{
     const data=JSON.parse(event.data);
     if(data.type==="raw" && data.pressed) {rawSignal=data.signature;$("raw-signal").textContent=rawSignal;}
     if(data.type==="control") inputFeedback(data);
     if(data.type==="voice")updateVoice(data);
-    if(data.type==="state_changed")scheduleRefresh();
+    if(data.type==="state_changed" || data.type==="device")scheduleRefresh();
     if(data.type==="error" || data.type==="notice")notice(data.message);
     // Keep transcripts out of the event log.
     if(data.type!=="voice") {eventLines.unshift(JSON.stringify(data));eventLines.length=Math.min(eventLines.length,40);$("events").textContent=eventLines.join("\n");}

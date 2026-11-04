@@ -109,6 +109,8 @@ class ActionRunner:
                 if cancelled.is_set():
                     break
                 self.backend.shortcut(action["keys"], cancelled)
+        elif kind == "scroll":
+            self.backend.scroll(action["direction"])
         elif kind == "volume":
             self.backend.shortcut({"up": "VOLUMEUP", "down": "VOLUMEDOWN", "mute": "MUTE"}[action["operation"]], cancelled)
         elif kind == "text":

@@ -1,5 +1,5 @@
 export const controls = {top:"语音键", middle:"中键", bottom:"下键", knob:"旋钮按下", cw:"顺时针", ccw:"逆时针"};
-export const actionNames = {none:"无动作",inherit:"继承底层",shortcut:"快捷键",text:"输入文本",application:"启动应用",website:"打开网站",shell:"Shell 命令",volume:"音量",macro:"顺序宏",layer:"切换层",profile:"切换方案",momentary_layer:"按住切层",voice:"语音"};
+export const actionNames = {none:"无动作",inherit:"继承底层",shortcut:"快捷键",text:"输入文本",application:"启动应用",website:"打开网站",shell:"Shell 命令",volume:"音量",scroll:"鼠标滚轮",macro:"顺序宏",layer:"切换层",profile:"切换方案",momentary_layer:"按住切层",voice:"语音"};
 export function clone(value) { return JSON.parse(JSON.stringify(value)); }
 export function newAction(type) {
   switch(type) {
@@ -7,6 +7,7 @@ export function newAction(type) {
     case "text": case "shell": return {type,value:""};
     case "website": return {type,url:"https://example.com"};
     case "application": return {type,argv:["/usr/bin/true"]};
+    case "scroll": return {type,direction:"down"};
     case "volume": return {type,operation:"up"};
     case "macro": return {type,steps:[{type:"shortcut",keys:"CTRL+C"},{delay_ms:100}]};
     case "layer": case "momentary_layer": return {type,index:0};
@@ -61,6 +62,7 @@ export function validateActionDraft(action,macroStep=false) {
   if(["text","shell"].includes(action.type))string(action.value ?? "","文本或命令");
   if(["layer","momentary_layer"].includes(action.type)&&(!Number.isInteger(action.index)||action.index<0||action.index>3))throw new Error("层编号必须为 0–3");
   if(action.type==="profile")string(action.id,"方案");
+  if(action.type==="scroll"&&!["up","down"].includes(action.direction))throw new Error("滚动方向无效");
   if(action.type==="volume"&&!["up","down","mute"].includes(action.operation))throw new Error("音量操作无效");
   if(action.type==="voice"&&!["ptt","confirm","cancel"].includes(action.operation))throw new Error("语音操作无效");
   if(macroStep && ["macro","voice","momentary_layer","inherit"].includes(action.type))throw new Error("不支持的宏步骤");
@@ -88,6 +90,7 @@ export function actionLabel(action) {
     case "none":return "×";
     case "inherit":return "▽";
     case "shortcut":return action.keys+(action.mode==="hold"?" ↓":action.repeat>1?" ×"+action.repeat:"");
+    case "scroll":return action.direction==="up"?"向上滚动":"向下滚动";
     case "volume":return {up:"Vol +",down:"Vol −",mute:"Mute"}[action.operation];
     case "layer":return "TO("+action.index+")";
     case "momentary_layer":return "MO("+action.index+")";
@@ -105,6 +108,13 @@ export function resolveBinding(config,profile,layer,control,gesture) {
   let action=config.profiles[profile].layers[layer].bindings[control]?.[gesture];
   while (action?.type==="inherit" && layer>0) action=config.profiles[profile].layers[--layer].bindings[control]?.[gesture];
   return action?.type==="inherit" ? {type:"none"} : action;
+}
+export function activeVoiceBinding(config) {
+  const profile=config.active_profile, layer=config.active_layer;
+  const bindings=config.profiles[profile].layers[layer].bindings.top || {};
+  return Object.fromEntries(Object.keys(bindings).map(trigger=>[
+    trigger,clone(resolveBinding(config,profile,layer,"top",trigger) || {type:"none"})
+  ]));
 }
 export function ensureLibrary(config) { return config.library ||= {applications:[],macros:[]}; }
 export function libraryUsage(config,id) {
@@ -154,7 +164,7 @@ export function macroFromCode(source) {
     if(match) {
       const step=JSON.parse(match[1]);
       if(!step || typeof step!=="object" || Array.isArray(step) ||
-        !["shortcut","application","website","text","volume","shell","layer","profile"].includes(step.type) ||
+        !["shortcut","application","website","text","volume","scroll","shell","layer","profile"].includes(step.type) ||
         step.mode==="hold")throw new Error("不支持的宏步骤");
       if(step.type==="shortcut" && !validShortcut(step.keys || ""))throw new Error("无效的快捷键");
       steps.push(step);continue;

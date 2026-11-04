@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+PYTHONPATH=/usr/lib/vibekey exec /usr/bin/python3 -m vibekey.cli_terminal claude "$@"

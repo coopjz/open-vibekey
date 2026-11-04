@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {newAction,setBinding,addProfile,shortcutFromEvent,resolveBinding,saveLibraryItem,libraryUsage,macroFromCode,macroToCode,validShortcut} from "../web/model.mjs";
+import {newAction,setBinding,addProfile,shortcutFromEvent,resolveBinding,saveLibraryItem,libraryUsage,macroFromCode,macroToCode,validShortcut,activeVoiceBinding} from "../web/model.mjs";
 
 function config() {
   return {profiles:{default:{name:"Default",layers:Array.from({length:4},()=>({bindings:{top:{single:{type:"none"}}}}))}}};
@@ -79,4 +79,15 @@ test("website URL validates and survives macro code round trip",async()=>{
   assert.deepEqual(macroFromCode(macroToCode([action])),[action]);
   for(const url of ["example.com","file:///etc/passwd","javascript:alert(1)","https:///path","https://host/a b","https://host\\evil"])
     assert.throws(()=>validateActionDraft({type:"website",url}));
+});
+
+test("preset voice copy resolves inherited bindings from the active layer",()=>{
+  const value=config();value.active_profile="default";value.active_layer=2;
+  value.profiles.default.layers[0].bindings.top={single:{type:"shortcut",keys:"RIGHTALT",mode:"hold"}};
+  value.profiles.default.layers[1].bindings.top={single:{type:"inherit"}};
+  value.profiles.default.layers[2].bindings.top={single:{type:"inherit"}};
+  const binding=activeVoiceBinding(value);
+  assert.deepEqual(binding,{single:{type:"shortcut",keys:"RIGHTALT",mode:"hold"}});
+  binding.single.keys="CTRL+D";
+  assert.equal(value.profiles.default.layers[0].bindings.top.single.keys,"RIGHTALT");
 });

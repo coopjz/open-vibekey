@@ -45,5 +45,8 @@ No vendor executable was run, hardware command sent, feature added, or push made
 See `studio-integration.md` for the current result. All 743 payload filenames
 are mapped, 92 Qt resources recovered, and the AU05 illustration plus a Linux
 website action integrated. REA CLI/Ghidra successfully inspected the x64 DLL.
-Earlier “Remaining work” entries describe the starting state; device filters,
-hardware writes and firmware update behavior remain unverified.
+Earlier “Remaining work” entries describe the starting state; device filters
+and firmware update behavior remain unverified.
+
+See `presets-and-lighting.md` for the later AU05-X preset integration and verified
+battery queries, lighting mode and all-on brightness writes with device readback.

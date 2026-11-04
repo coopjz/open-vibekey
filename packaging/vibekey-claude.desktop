@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Code (VibeKey)
+Comment=Launch Claude Code with VibeKey automatic profile following
+Exec=/usr/bin/vibekey-claude
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;
+StartupNotify=false

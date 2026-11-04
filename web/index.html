@@ -3,26 +3,37 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#222020"><title>VibeKey · 键位工作台</title>
-  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/workbench.css"><script type="module" src="/app.js"></script>
 </head>
 <body>
   <header class="app-bar">
-    <a class="brand" href="#workspace"><span class="brand-mark">≋</span> VIBEKEY <small>LINUX</small></a>
+    <a class="brand" href="#workspace"><span class="brand-mark">≋</span> VIBEKEY</a>
     <nav aria-label="页面导航">
       <button data-page="workspace" class="nav-button current"><span>⌨</span><span data-i18n>键位</span></button>
       <button data-page="voice" class="nav-button"><span>◉</span><span data-i18n>语音</span></button>
       <button data-page="settings" class="nav-button"><span>⚙</span><span data-i18n>设置</span></button>
     </nav>
-    <div class="header-status"><span id="connection" role="status">连接中</span><span id="battery">电量未知</span></div>
+    <div class="header-status"><span id="connection" role="status">连接中</span><span class="battery-status" id="battery-status" title="等待电量上报"><span class="battery-icon" aria-hidden="true"><i id="battery-fill"></i></span><span id="battery">—</span></span></div>
   </header>
   <main>
     <div id="notice" role="alert" hidden></div>
     <section id="workspace" class="page">
+      <section class="scene-overview" aria-labelledby="scene-heading">
+        <h2 id="scene-heading">场景预设</h2>
+        <div id="scene-presets" class="scene-grid" role="group" aria-label="选择场景预设"></div>
+        <div class="follow-overview">
+          <div class="follow-overview-copy"><strong>软件自动跟随</strong><span id="home-follow-summary"></span></div>
+          <label class="toggle"><input id="home-follow-enabled" type="checkbox"><span id="home-follow-state">已关闭</span></label>
+          <button id="home-follow-details" class="subtle">详细设置 →</button>
+        </div>
+      </section>
+      <section class="workbench-panel" aria-label="设备键位配置">
+      <div class="device-heading"><div><h1>Ulanzi Vibe Key <span>AU05</span></h1><p id="active-state">加载配置…</p></div><label class="toggle"><input id="preview" type="checkbox"><span data-i18n>预览 / 学习模式</span></label></div>
       <div class="workspace-top">
         <div class="layer-tools"><span class="muted">Layer</span><div id="layer-tabs" class="segmented"></div><select id="layer" aria-label="编辑层" hidden></select><span id="layer-name"></span></div>
-        <div class="profile-tools"><label><span data-i18n>正在编辑的方案</span><select id="profile" aria-label="配置方案"></select></label><button id="activate" data-i18n>启用此方案与层</button></div>
+        <div class="profile-tools"><label><span data-i18n>编辑方案</span><select id="profile" aria-label="配置方案"></select></label><button id="activate" data-i18n>启用此方案与层</button></div>
       </div>
-      <div class="device-heading"><div><h1>Ulanzi Vibe Key <span>AU05</span></h1><p id="active-state">加载配置…</p></div><label class="toggle"><input id="preview" type="checkbox"><span data-i18n>预览 / 学习模式</span></label></div>
+
       <div id="activation-warning" class="activation-warning" role="status" hidden></div>
       <div class="device-stage">
         <div class="control-column left-controls">
@@ -35,20 +46,23 @@
           <button class="physical dial" data-control="knob" aria-label="旋钮按下"><span class="dial-face"><i></i><i></i><i></i><i></i></span><span class="dial-label">◉</span></button>
           <div class="hardware-keys"><button class="physical key-top" data-control="top" aria-label="上键"><span>◉</span></button><button class="physical key-middle" data-control="middle" aria-label="中键"><span>↵</span></button><button class="physical key-bottom" data-control="bottom" aria-label="下键"><span>×</span></button></div>
           <span class="device-led"></span>
-        </div><span class="hardware-caption">AU05 · USB</span></div>
+        </div></div>
         <div class="control-column right-controls">
           <div class="control-block" data-block="top"><div class="control-name" data-i18n>上键</div><div class="gesture-matrix" data-matrix="top"></div></div>
           <div class="control-block" data-block="middle"><div class="control-name" data-i18n>中键</div><div class="gesture-matrix" data-matrix="middle"></div></div>
           <div class="control-block" data-block="bottom"><div class="control-name" data-i18n>下键</div><div class="gesture-matrix" data-matrix="bottom"></div></div>
         </div>
       </div>
-      <div class="live-strip"><span class="live-dot"></span><span id="last-input">最近输入：等待设备操作</span><button id="reset-input" class="text-button" data-i18n>清零计数</button><span class="strip-divider"></span><span class="muted" data-i18n>框选表示正在编辑，闪烁表示实际输入</span><label class="check simulation-toggle"><input id="simulate-input" type="checkbox"><span data-i18n>屏幕模拟</span></label></div>
+      <div class="live-strip"><span class="live-dot"></span><span id="last-input">最近输入：等待设备操作</span><button id="reset-input" class="text-button" data-i18n>清零计数</button><label class="check simulation-toggle"><input id="simulate-input" type="checkbox"><span data-i18n>屏幕模拟</span></label></div>
+      </section>
+      <section class="binding-panel" aria-label="动作编辑">
       <div class="selection-bar"><div><span class="muted" data-i18n>正在编辑</span><strong id="control-title">上键</strong><span class="selection-chevron">›</span><span id="gesture-title">单击</span><span id="mapping-label" class="mapping-label">—</span></div><div id="output-options"></div></div>
       <section class="action-workspace">
         <div class="palette"><div class="palette-head"><div id="palette-tabs" class="palette-tabs" role="tablist" aria-label="动作分类"></div><input id="key-search" type="search" placeholder="搜索按键或动作" aria-label="搜索按键或动作"></div><div id="palette-content"></div></div>
         <div class="action-inspector"><div class="inspector-heading"><span data-i18n>动作设置</span><span id="binding-kind"></span></div><div id="bindings"></div><details class="learning"><summary data-i18n>学习设备信号</summary><p class="muted" data-i18n>开启预览，操作实物，再将信号映射到当前控件。</p><code id="raw-signal">等待设备信号</code><button id="learn" data-i18n>映射到当前控件</button></details></div>
       </section>
-      <div class="save-bar"><div><span id="dirty">配置已加载</span><span class="save-hint" data-i18n>保存到本机后生效，关闭网页可继续使用</span></div><div><button id="discard" class="text-button" data-i18n>丢弃修改</button><button id="save" class="primary" data-i18n>保存到本机</button></div></div>
+      <div class="save-bar"><div><span id="dirty">配置已加载</span></div><div><button id="discard" class="text-button" data-i18n>丢弃修改</button><button id="save" class="primary" data-i18n>保存到本机</button></div></div>
+      </section>
     </section>
     <section id="voice" class="panel page" hidden>
       <div class="settings-card"><h3>fcitx5-vinput · <span data-i18n>本地 / API</span></h3><p data-i18n>使用 fcitx5-vinput：在键位页选择实体按键的单击槽，再从“其他”选择 fcitx5-vinput，保存后按住说话、松开识别。需先安装并启动 Fcitx5、vinput 和识别模型。结果由输入法提交到当前输入框。</p><p data-i18n>默认触发键为右 Alt；若已修改 vinput 热键，请同步修改快捷键。下方录音、确认和取消按钮用于内置语音，不控制 vinput。</p></div>
@@ -70,8 +84,15 @@
       <button id="copy-result" class="subtle">复制结果</button>
     </section>
     <section id="settings" class="panel page" hidden>
-      <div class="section-title"><div><h2>配置与诊断</h2><p>运行状态与可移植配置。设备亮度、灯光和固件键表写入尚未验证，保持禁用。</p></div><button id="refresh-device" class="subtle">重新连接设备</button></div>
-<div class="settings-card"><h3 data-i18n>工作区与配置方案</h3><div class="form-grid"><label><span data-i18n>界面语言</span><select id="language"><option value="zh">简体中文</option><option value="en">English</option></select></label><label><span data-i18n>方案名称</span><input id="profile-name"></label></div><div class="toolbar"><button id="rename-profile" data-i18n>重命名方案</button><button id="add-profile" data-i18n>复制为新方案</button><button id="delete-profile" class="danger" data-i18n>删除当前方案</button><button id="rename-layer" data-i18n>重命名当前层</button><button id="cancel" class="danger" data-i18n>停止全部动作</button></div></div><div class="settings-card"><h3 data-i18n>设备状态</h3><div id="device-cards" class="device-cards"></div><div class="unsupported"><span>◌</span><div><strong data-i18n>灯效与保活</strong><p data-i18n>当前驱动尚未验证灯光、亮度和保活写入，因此不提供可执行的硬件写入控件。电量仅在设备上报时显示。</p></div></div></div>
+      <div class="section-title"><div><h2>设备与方案</h2></div><button id="refresh-device" class="subtle">重新连接设备</button></div>
+<div class="settings-card preset-section"><div class="card-heading"><h3>场景预设</h3><span class="pill">WorkBuddy / CLI</span></div><div class="preset-options"><label class="check"><input id="preset-voice" type="checkbox" checked>沿用当前方案的语音键</label><span>WorkBuddy 与 CLI 的独立键位方案，均可继续编辑。</span></div><div id="preset-cards" class="preset-grid"></div></div><div id="follow-settings" class="settings-card follow-section" tabindex="-1"><div class="card-heading"><h3>软件自动跟随</h3><label class="toggle"><input id="follow-enabled" type="checkbox"><span>启用自动跟随</span></label></div>
+      <p class="follow-description">前台应用切换时启用绑定方案；未匹配的应用使用默认方案。多条规则匹配时，优先使用排在前面的规则。</p>
+      <div class="form-grid"><label>默认方案<select id="follow-default"></select></label><label>默认层<select id="follow-default-layer"><option value="0">Layer 0</option><option value="1">Layer 1</option><option value="2">Layer 2</option><option value="3">Layer 3</option></select></label></div>
+      <div class="follow-live"><span class="pill" id="follow-status">已关闭</span><span id="follow-current">前台应用切换时自动更新</span></div><p id="follow-availability" role="status"></p>
+      <div class="toolbar"><button id="follow-refresh">刷新应用窗口</button><select id="follow-window" aria-label="已打开的应用窗口"><option value="">选择已打开的应用窗口</option></select><button id="follow-bind">绑定所选窗口</button></div>
+      <div id="follow-rules"></div><p id="follow-empty">尚未绑定应用</p><div class="toolbar"><button id="follow-add" class="subtle">添加匹配规则</button><button id="follow-cli">添加 CLI 自动跟随</button></div>
+      <details><summary>Codex CLI 与 Claude Code</summary><p>使用下面的入口打开独立终端，窗口标题变化时仍能识别。已有终端可通过窗口类别和标题包含手动绑定；不要仅绑定整个终端应用。</p><div class="toolbar"><button id="launch-codex">启动 Codex CLI</button><button id="launch-claude">启动 Claude Code</button></div></details>
+      </div><div class="settings-card"><h3 data-i18n>工作区与配置方案</h3><div class="form-grid"><label><span data-i18n>界面语言</span><select id="language"><option value="zh">简体中文</option><option value="en">English</option></select></label><label><span data-i18n>方案名称</span><input id="profile-name"></label></div><div class="toolbar"><button id="rename-profile" data-i18n>重命名方案</button><button id="add-profile" data-i18n>复制为新方案</button><button id="delete-profile" class="danger" data-i18n>删除当前方案</button><button id="rename-layer" data-i18n>重命名当前层</button><button id="cancel" class="danger" data-i18n>停止全部动作</button></div></div><div class="settings-card"><h3 data-i18n>设备状态</h3><div id="device-cards" class="device-cards"></div><div class="lighting-panel"><div class="card-heading"><h3>灯效</h3><span id="light-status" role="status">等待设备</span></div><div class="form-grid"><label>灯光模式<select id="light-mode"><option value="1">全亮</option><option value="0">全灭</option><option value="2">工作模式</option></select></label><label>全亮模式亮度<input id="light-brightness" type="range" min="0" max="20" step="1"><output id="light-brightness-value">—</output></label></div><div class="toolbar"><button id="apply-light">应用灯效</button><button id="read-device" class="subtle">刷新电量与灯效</button></div><p id="light-feedback" role="status"></p></div></div>
       <div class="form-grid">
         <label>双击窗口（毫秒）<input id="double-ms" type="number" min="100" max="1000"></label>
         <label>长按阈值（毫秒）<input id="hold-ms" type="number" min="200" max="3000"></label>
@@ -83,7 +104,7 @@
       <details><summary>能力与设备诊断</summary><pre id="diagnostics"></pre></details>
       <details><summary>最近事件</summary><pre id="events" aria-live="off"></pre></details>
     </section>
-    <footer><span>VIBEKEY / LINUX</span><span id="session"></span><span data-i18n>本地运行 · 开源</span></footer>
+
   </main>
   <dialog id="library-dialog"><form id="library-form"><div class="dialog-head"><h2 id="library-title"></h2><button id="close-library" type="button" class="text-button" aria-label="关闭">×</button></div><label><span data-i18n>动作名称</span><input id="library-name" maxlength="100" required></label><div id="library-editor"></div><p id="library-error" class="error-text" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel-library" data-i18n>取消</button><button type="submit" class="primary" data-i18n>保存到动作库</button></div></form></dialog>
 </body></html>

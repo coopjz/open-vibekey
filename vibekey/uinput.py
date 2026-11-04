@@ -109,6 +109,12 @@ class UInput:
                     if code in self.held:
                         self.key(code, False)
 
+    def scroll(self, direction):
+        with self.lock:
+            self.open()
+            self._event(2, 8, 1 if direction == "up" else -1)
+            self._event(0, 0, 0)
+
     def hold_shortcut(self, value, pressed, owner):
         codes = parse_shortcut(value)
         with self.lock:
@@ -158,6 +164,9 @@ class FakeInput:
         parse_shortcut(value)
         if not cancel or not cancel.is_set():
             self.bus.publish("simulated_action", action="shortcut", keys=value)
+
+    def scroll(self, direction):
+        self.bus.publish("simulated_action", action="scroll", direction=direction)
 
     def release_all(self):
         self.held.clear()

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Codex CLI (VibeKey)
+Comment=Launch Codex CLI with VibeKey automatic profile following
+Exec=/usr/bin/vibekey-codex
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;
+StartupNotify=false

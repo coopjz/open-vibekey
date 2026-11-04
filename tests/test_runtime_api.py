@@ -128,6 +128,35 @@ class APITests(unittest.TestCase):
         self.assertTrue(json.loads(raw)["simulate"])
         self.assertIn(b"VibeKey", self.request("/")[1])
 
+    def test_presets_and_hardware_api_boundaries(self):
+        status, raw = self.request("/api/presets")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(json.loads(raw)), 5)
+        self.assertEqual(self.request("/api/device/lighting", {"mode": 1, "brightness": 7}, "POST")[0], 403)
+        headers = {"X-VibeKey-Token": self.server.token}
+        self.assertEqual(self.request("/api/device/lighting", {"mode": 1, "brightness": 7}, "POST", headers)[0], 400)
+        self.assertEqual(self.request("/api/device/lighting", {"mode": True, "brightness": 7}, "POST", headers)[0], 400)
+        self.assertEqual(self.request("/api/device/status", {}, "POST", headers)[0], 400)
+        self.assertFalse(self.runtime.device.commands)
+        with mock.patch("vibekey.cli_terminal.launch") as launch:
+            self.assertEqual(self.request("/api/cli/launch", {"tool": "codex"}, "POST", headers)[0], 400)
+            launch.assert_not_called()
+
+    def test_window_listing_and_cli_launcher_are_bounded(self):
+        with mock.patch("vibekey.follow.windows", return_value=[{"id": "0x1", "title": "App", "wm_class": "app.App", "role": ""}]):
+            status, data = self.request("/api/windows")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(data)["windows"][0]["id"], "0x1")
+        with mock.patch("vibekey.follow.windows", side_effect=OSError("gone")):
+            self.assertEqual(self.request("/api/windows")[0], 400)
+        headers = {"X-VibeKey-Token": self.server.token}
+        self.runtime.simulate = False
+        with mock.patch("vibekey.cli_terminal.launch") as launch:
+            self.assertEqual(self.request("/api/cli/launch", {"tool": "codex"}, "POST", headers)[0], 200)
+            launch.assert_called_once_with("codex")
+        with mock.patch("vibekey.cli_terminal.launch", side_effect=ValueError("bad tool")):
+            self.assertEqual(self.request("/api/cli/launch", {"tool": "other"}, "POST", headers)[0], 400)
+
     def test_host_origin_token(self):
         self.assertEqual(self.request("/api/state", headers={"Host":"evil.example"})[0], 403)
         self.assertEqual(self.request("/api/state", headers={"Origin":"https://evil.example"})[0], 403)

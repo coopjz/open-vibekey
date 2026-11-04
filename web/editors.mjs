@@ -76,6 +76,8 @@ export function actionFields(parent,action,onChange,context={}) {
     field(stack,"参数（每行一个）",args);
     field(stack,"X11 窗口类（可选）",input(action.wm_class || "",wm_class=>commit({wm_class})));
     stack.append(node("p","muted","启动命令退出后继续宏步骤；需要复用时请加入 APP 库。"));
+  } else if(action.type==="scroll") {
+    field(stack,"滚动方向",select(action.direction,[["up","向上滚动"],["down","向下滚动"]],direction=>commit({direction})));
   } else if(action.type==="volume") {
     field(stack,"音量操作",select(action.operation,[["up","增大音量"],["down","减小音量"],["mute","切换静音"]],operation=>commit({operation})));
   } else if(["layer","momentary_layer"].includes(action.type)) {
@@ -162,7 +164,7 @@ export function macroEditor(parent,initial,onChange,context) {
           steps[index]={delay_ms:value};announce();
         },"number");delay.min="0";delay.max="30000";field(editor,"等待（毫秒）",delay);
       } else {
-        const options=["shortcut","application","website","text","volume","shell","layer","profile"].map(type=>[type,actionNames[type]]);
+        const options=["shortcut","application","website","text","volume","scroll","shell","layer","profile"].map(type=>[type,actionNames[type]]);
         const kind=select(step.type,options,type=>{steps[index]=newAction(type);announce();render();});field(editor,"步骤类型",kind);
         actionFields(editor,step,value=>{steps[index]=value;announce();render();},{...context,editMacro:undefined});
         if(step.type==="application" && context.library?.applications?.length) {

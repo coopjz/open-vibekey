@@ -1,6 +1,7 @@
 import copy
 import os
 import shutil
+import subprocess
 import threading
 import time
 
@@ -10,8 +11,10 @@ from .device import Device, discover
 from .events import EventBus
 from .gestures import Gestures
 from .text_helper import TextClient
+from .protocol import lighting_commands
 from .uinput import FakeInput, UInput
 from .voice import Voice
+from . import follow
 
 
 class Runtime:
@@ -30,19 +33,28 @@ class Runtime:
         self.overlays = {}
         self.preview_until = 0
         self.last_raw = None
-        self.status = {"connected": simulate, "error": None, "battery": None, "online": None}
+        self.status = {"connected": simulate, "error": None, "battery": None, "online": None, "lighting": None, "light_operation": None}
         self.candidates = []
         self.stop_event = threading.Event()
         self.refresh_requested = threading.Event()
+        self.follow_selection = None
+        self.follow_identity = None
+        self.follow_status = {"enabled": False, "available": False, "error": "", "window": None, "rule": None}
+        self.follow_thread = threading.Thread(target=self._follow_loop, name="application-follow", daemon=True)
         self.thread = threading.Thread(target=self._loop, name="device-runtime", daemon=True)
 
     def start(self):
         self.thread.start()
+        self.follow_thread.start()
+
+    def selection(self):
+        return self.follow_selection or (self.store.value["active_profile"], self.store.value["active_layer"])
 
     def bindings(self, control):
         config = self.store.value
-        layer = list(self.overlays.values())[-1] if self.overlays else config["active_layer"]
-        layers = config["profiles"][config["active_profile"]]["layers"]
+        profile, base_layer = self.selection()
+        layer = list(self.overlays.values())[-1] if self.overlays else base_layer
+        layers = config["profiles"][profile]["layers"]
         result = {}
         for trigger, action in layers[layer]["bindings"].get(control, {}).items():
             index = layer
@@ -116,13 +128,17 @@ class Runtime:
         with self.lock:
             self.gestures.reset()
             self.overlays.clear()
+            profile, layer = self.selection()
             if action["type"] == "profile":
                 if action["id"] not in self.store.value["profiles"]:
                     raise ValueError("Unknown profile")
-                self.store.value["active_profile"] = action["id"]
-                self.store.value["active_layer"] = 0
+                profile, layer = action["id"], 0
             else:
-                self.store.value["active_layer"] = action["index"]
+                layer = action["index"]
+            if self.follow_selection is not None:
+                self.follow_selection = (profile, layer)
+            else:
+                self.store.value.update(active_profile=profile, active_layer=layer)
             self.bus.publish("state_changed")
 
     def deliver_text(self, text, insert=True, cancelled=None):
@@ -147,12 +163,42 @@ class Runtime:
     def device_status(self, event):
         with self.lock:
             if event["kind"] == "battery":
-                self.status["battery"] = event
+                self.status["battery"] = dict(event, updated_at=time.time())
+            elif event["kind"] == "lighting":
+                self.status["lighting"] = dict(event, updated_at=time.time())
+                operation = self.status["light_operation"]
+                if operation and operation["state"] == "pending":
+                    if (event["mode"], event["brightness"]) == (operation["mode"], operation["brightness"]):
+                        operation.update(state="confirmed", message="灯效已由设备回读确认")
             elif event["kind"] == "online":
                 self.status["online"] = event["online"]
                 if not event["online"]:
                     self.cancel()
+                    self.status.update(battery=None, lighting=None)
             self.bus.publish("device", **event)
+
+    def read_device_status(self):
+        with self.lock:
+            if self.simulate:
+                raise ValueError("Connect a real device to read its status")
+            self.device.request_status()
+
+    def set_lighting(self, mode, brightness):
+        commands = lighting_commands(mode, brightness)
+        with self.lock:
+            if self.simulate or not self.device.selected or self.status["online"] is not True:
+                raise ValueError("Wake the connected device before changing lighting")
+            if not self.status["lighting"]:
+                raise ValueError("Read device lighting before changing it")
+            operation = self.status["light_operation"]
+            if operation and operation["state"] == "pending":
+                raise ValueError("Waiting for device confirmation")
+            self.device.queue_commands(commands)
+            self.status["light_operation"] = {
+                "state": "pending", "mode": mode, "brightness": brightness,
+                "deadline": time.monotonic() + 5,
+                "message": "已发送，等待设备回读…"}
+            self.bus.publish("state_changed")
 
     def cancel(self):
         self.gestures.reset()
@@ -172,6 +218,7 @@ class Runtime:
         with self.lock:
             # Validate and persist before changing the running configuration.
             self.store.save(value)
+            self.follow_selection = self.follow_identity = None
             self.cancel()
             self.gestures = Gestures(self.dispatch, **self.store.value["gestures"])
             self.refresh_requested.set()
@@ -184,14 +231,16 @@ class Runtime:
                 "devices": copy.deepcopy(self.candidates),
                 "selected": copy.deepcopy(self.device.selected),
                 "config_error": self.store.error,
-                "active_profile": self.store.value["active_profile"],
-                "active_layer": list(self.overlays.values())[-1] if self.overlays else self.store.value["active_layer"],
+                "active_profile": self.selection()[0],
+                "auto_follow": copy.deepcopy(self.follow_status),
+                "active_layer": list(self.overlays.values())[-1] if self.overlays else self.selection()[1],
                 "preview": self.preview_until > time.monotonic(),
                 "last_raw": self.last_raw, "voice": self.voice.snapshot(),
             }
 
     def capabilities(self):
         return {
+            "auto_follow": {"available": follow.availability()[0], "reason": follow.availability()[1]},
             "session": os.environ.get("XDG_SESSION_TYPE", "unknown"),
             "uinput_access": os.access("/dev/uinput", os.W_OK),
             "parec": bool(shutil.which("parec")),
@@ -206,13 +255,52 @@ class Runtime:
             "application_focus": os.environ.get("XDG_SESSION_TYPE") == "x11" and bool(shutil.which("wmctrl")),
             "wayland_text": "clipboard-and-manual-paste",
             "hardware_writes": {
-                "brightness": "unverified-disabled", "lights": "unverified-disabled",
+                "brightness": "vendor-readback", "lights": "vendor-readback",
                 "key_tables": "unverified-disabled", "studio_heartbeat": "disabled",
             },
-            "battery": "passive-vendor-reports-only",
+            "battery": "active-query-every-20-seconds",
             "languages": {"core": "Python 3.8+", "ui": "JavaScript / HTML / CSS",
                           "text_helper": "Python / GTK3", "offline_asr": "C/C++ whisper.cpp (external)"},
         }
+
+    def update_follow(self, window, settings, available=True, error=""):
+        """Apply one observation under the runtime lock, without persisting switches."""
+        with self.lock:
+            previous_status = self.follow_status
+            rule = follow.match_rule(window or {}, settings["rules"]) if available else None
+            self.follow_status = {"enabled": settings["enabled"], "available": available,
+                                  "error": error, "window": window, "rule": rule["id"] if rule else None}
+            target = ((rule["profile"], rule["layer"]) if rule else
+                      (settings["default_profile"], settings["default_layer"]))
+            identity = ((window or {}).get("id"), rule["id"] if rule else None, target, available)
+            if not settings["enabled"]:
+                identity = None
+                target = None
+            if identity != self.follow_identity or (target is None and self.follow_selection is not None):
+                if (target or (self.store.value["active_profile"], self.store.value["active_layer"])) != self.selection():
+                    # Release held shortcuts before changing which profile consumes edges.
+                    self.cancel()
+                self.follow_selection = target
+                self.follow_identity = identity
+                self.bus.publish("state_changed")
+            elif previous_status != self.follow_status:
+                self.bus.publish("state_changed")
+
+    def _follow_loop(self):
+        while not self.stop_event.wait(0.4):
+            with self.lock:
+                settings = copy.deepcopy(self.store.value["auto_follow"])
+                valid = not self.store.error
+            available, error = follow.availability()
+            window = None
+            if settings["enabled"] and available and valid:
+                try:
+                    window = follow.active_window()
+                except (OSError, subprocess.TimeoutExpired):
+                    available, error = False, "暂时无法读取前台窗口"
+            with self.lock:
+                if self.store.value["auto_follow"] == settings and valid:
+                    self.update_follow(window, settings, available, error)
 
     def _loop(self):
         next_scan = 0
@@ -231,9 +319,13 @@ class Runtime:
                             self.candidates = discover()
                             if not self.device.selected and not self.store.error:
                                 self.device.connect(self.candidates, self.store.value["device"])
-                                self.status.update(connected=True, error=None, battery=None, online=None)
+                                self.status.update(connected=True, error=None, battery=None, online=None, lighting=None, light_operation=None)
                                 self.bus.publish("state_changed")
                         self.device.poll()
+                    operation = self.status["light_operation"]
+                    if operation and operation["state"] == "pending" and now >= operation["deadline"]:
+                        operation.update(state="timeout", message="设备未确认灯效，请唤醒后刷新重试")
+                        self.bus.publish("state_changed")
                     self.gestures.tick()
                     if self.preview_until and now >= self.preview_until:
                         self.preview_until = 0
@@ -242,7 +334,7 @@ class Runtime:
                     changed = self.status["connected"] or self.status["error"] != str(exc)
                     self.cancel()
                     self.device.close()
-                    self.status.update(connected=False, error=str(exc), battery=None, online=None)
+                    self.status.update(connected=False, error=str(exc), battery=None, online=None, lighting=None, light_operation=None)
                     if changed:
                         self.bus.publish("state_changed")
             self.voice.tick()
@@ -251,6 +343,8 @@ class Runtime:
         self.stop_event.set()
         if self.thread.is_alive():
             self.thread.join(timeout=4)
+        if self.follow_thread.is_alive():
+            self.follow_thread.join(timeout=2)
         with self.lock:
             self.cancel()
             self.device.close()

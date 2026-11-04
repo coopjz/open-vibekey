@@ -115,3 +115,78 @@ systemctl --user disable --now vibekey-voice.target
 
 这会同时停止 AU05 抓取与虚拟输出。恢复原输入法时，将 `~/.xinputrc` 改名保留，
 重新选择原 IBus 输入法并注销/登录。该文件部署前不存在；不要删除用户后续新增的配置。
+
+## 候选框主题（2026-11-04）
+
+已为当前 Flatpak Fcitx5 安装并选择 `FluentLight-solid`，字体为
+`Noto Sans CJK SC 11`；另安装 `FluentDark-solid` 供手动选择。
+浅色不透明版本适用于当前 GNOME 浅色桌面，不依赖 KDE/KWin 模糊。
+来源：https://github.com/Reverier-Xu/Fluent-fcitx5 ，提交
+`399699ac7d366ed6c1952646ed71647e3c8f99b5`，MPL-2.0。
+主题仅安装于用户 Flatpak 数据目录，保留其 LICENSE，没有捆绑进项目发行包。
+
+主题目录：`~/.var/app/org.fcitx.Fcitx5/data/fcitx5/themes/`。
+通过 ClassicUI D-Bus 配置热加载，无需重启输入法或关闭当前应用。
+原外观备份：`~/.local/state/vibekey-voice/backups/appearance-20261104-154543/classicui.json`。
+恢复默认可在输入法设置的 Classic User Interface 中选择 default 主题。
+
+当前 GNOME 自带输入源列表仍是英文键盘与 IBus libpinyin，未删除或改写。
+终端等已接入 Fcitx5 的应用由 Fcitx5 决定实际拼音状态；GNOME 顶栏显示的是
+GNOME 自己的输入源状态，因此二者不保证同步。GNOME 3.36 没有本次已部署的
+原生状态同步机制；进一步合并需要改变原输入源配置或额外的 Shell 集成。
+根据用户允许不强制统一的偏好，本轮保留现有顶栏与 GNOME 输入源。
+
+
+## Candlelight macOS Light 与顶栏集成评估（2026-11-04）
+
+当前主题已由 Fluent 替换为用户指定的 Candlelight `macOS-light`（SVG），
+另安装 `macOS-light-png` 备用。字体保持 Noto Sans CJK SC 11，已热加载。
+来源：https://github.com/thep0y/fcitx5-themes-candlelight ，提交
+`f297d1d43ddd5227406eae9f211cdc218af12a94`，MIT；每个本地主题目录保留 LICENSE。
+未将下载主题捆绑进项目发行包。
+原外观配置备份在 `~/.local/state/vibekey-voice/backups/candlelight-20261104-155128/`。
+
+GNOME 扩展网站对本机 3.36 返回的兼容 Kimpanel 为 **v54**，
+UUID `kimpanel@kde.org`，version_tag 18953。
+参考：https://extensions.gnome.org/extension/261/kimpanel/ 。
+仅下载至 /tmp 检查，未安装或启用扩展。
+
+检查 v54 源码可见，它通过 `org.kde.impanel` / `org.kde.impanel2` D-Bus
+协议创建 GNOME 顶栏指示器和自己的候选窗；设置仅有 vertical、font。
+它不是原生 GNOME IBus 输入源状态的直接同步器，也未发现自动隐藏原生
+keyboard 指示器的代码。因此启用扩展后仍需单独处理 GNOME 原输入源的重复
+指示器，不能承诺仅装一个扩展就自动只剩一个图标。
+
+如果 Fcitx5 切到 Kimpanel UI，候选框由 GNOME 扩展渲染，不再使用
+ClassicUI 的 Candlelight/macOS Light 主题。保留该主题与完整使用 Kimpanel
+候选框是两种 UI 路径；本轮仅说明取舍，没有改 UI provider 或 GNOME 输入源。
+
+
+## 离线准确率对照（2026-11-04，进行中）
+
+在用户确认整句检测正常、仍有错字后，新增并临时选用
+`onnx-xasr-zh-en-punct-int8-off`：X-ASR 中英混合、标点、离线 transducer 模型。
+它在 vinput registry 中声明支持热词；本轮尚未配置热词，避免混合改变多个变量。
+通过官方 `vinput model add` 安装，原 SenseVoice 模型完整保留。
+
+通过 `GetAsrBackendState` 确认目标和实际生效模型均为
+`model.sherpa-onnx.x-asr-zipformer-transducer-zh-en-punct-int8`，
+last_error 为空、reload_in_progress=false、has_effective_backend=true。
+VAD 继续关闭，AU05 麦克风和增益未更改。
+这是可加载性验证，不代表识别准确率已经优于 SenseVoice。
+正在等待用户提供“原话 → 实际识别结果”样例，做同一组语句的对照。
+
+切换对照模型：
+
+```bash
+~/.local/bin/vibekey-vinput model use onnx-xasr-zh-en-punct-int8-off
+```
+
+恢复原模型：
+
+```bash
+~/.local/bin/vibekey-vinput model use onnx-sv-zh-int8-off
+```
+
+切换由 vinput 异步重载；等待重载完成后再开始录音。
+API 仍因未填写用户凭据而未进行识别实测。

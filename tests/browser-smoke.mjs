@@ -228,6 +228,8 @@ try {
     for (const page of ["voice","settings"]) {
       await evaluate(`document.querySelector('[data-page="${page}"]').click()`);
       assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,name+" "+page+" horizontal overflow");
+      const settingsShot=await cdp("Page.captureScreenshot",{format:"png",captureBeyondViewport:true});
+      await writeFile(resolve("dist/previews/"+page+"-"+name+".png"),Buffer.from(settingsShot.data,"base64"));
     }
     await evaluate('document.querySelector(\'[data-page="workspace"]\').click()');
   }
@@ -239,6 +241,56 @@ try {
   saved=await (await fetch(origin+"/api/config")).json();
   assert.deepEqual(saved.profiles.default.layers[1].bindings.top.single,
     {type:"shortcut",keys:"RIGHTALT",mode:"hold",label:"fcitx5-vinput"});
+  // Official templates create editable drafts without activating or replacing existing work.
+  await evaluate(`document.querySelector('[data-page="settings"]').click()`);
+  assert.equal(await evaluate('document.querySelectorAll(".preset-card").length'),5);
+  assert.equal(await evaluate('document.getElementById("apply-light").disabled'),true);
+  assert.equal(await evaluate('document.getElementById("session")'),null);
+  await evaluate(`document.querySelector(".preset-card button").click()`);
+  assert.equal(await evaluate('document.getElementById("profile").value'),"workbuddy-default");
+  assert.equal(await evaluate('document.getElementById("activation-warning").hidden'),false);
+  await evaluate('document.getElementById("save").click()');
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"preset save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.active_profile,"default");
+  assert.deepEqual(saved.profiles["workbuddy-default"].layers[0].bindings.cw.single,{type:"scroll",direction:"down"});
+  assert.deepEqual(saved.profiles.default.layers[1].bindings.top.single,{type:"shortcut",keys:"RIGHTALT",mode:"hold",label:"fcitx5-vinput"});
+  await evaluate(`(()=>{const select=document.getElementById("profile");select.value="default";select.dispatchEvent(new Event("change"));})()`);
+  // CLI setup creates both profiles and stable-role rules without changing the fallback.
+  await evaluate(`(()=>{
+    document.querySelector('[data-page="settings"]').click();
+    document.getElementById("follow-cli").click();
+  })()`);
+  assert.equal(await evaluate('document.getElementById("follow-enabled").checked'),true);
+  assert.equal(await evaluate('document.querySelectorAll(".follow-rule").length'),2);
+  await evaluate('document.getElementById("save").click()');
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"automatic profiles save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.auto_follow.enabled,true);
+  assert.equal(saved.auto_follow.default_profile,"default");
+  assert.deepEqual(saved.auto_follow.rules.map(rule=>rule.role),["vibekey-codex","vibekey-claude"]);
+  assert.equal(saved.profiles["codex-cli"].layers[0].bindings.knob.single.keys,"CTRL+R");
+  assert.equal(saved.profiles["claude-code"].layers[0].bindings.knob.single.keys,"CTRL+O");
+  await evaluate('document.getElementById("follow-cli").click()');
+  assert.equal(await evaluate('document.querySelectorAll(".follow-rule").length'),2);
+  for(const [name,width,height] of [["desktop",1280,1000],["mobile",390,844]]) {
+    await cdp("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+    await evaluate('window.scrollTo(0,0)');await delay(150);
+    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,"follow rules "+name+" overflow");
+    const screenshot=await cdp("Page.captureScreenshot",{format:"png",captureBeyondViewport:true});
+    await writeFile(resolve("dist/previews/settings-follow-"+name+".png"),Buffer.from(screenshot.data,"base64"));
+  }
+  // Per-rule profile edits and priority controls survive persistence.
+  await evaluate(`(()=>{
+    const profile=document.querySelector('.follow-rule [data-rule-field="profile"]');
+    profile.value="claude-code";profile.dispatchEvent(new Event("change"));
+    document.getElementById("save").click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"follow rule edit save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.auto_follow.rules[0].profile,"claude-code");
+  await evaluate('document.getElementById("activate").click()');
+  await until(async()=>!(await (await fetch(origin+"/api/config")).json()).auto_follow.enabled,"manual activation disables automatic switching");
   // Malformed imports must leave the current editor usable.
   await evaluate(`(()=>{
     document.getElementById("config-json").value=JSON.stringify({
@@ -249,9 +301,84 @@ try {
   await until(()=>evaluate('document.getElementById("notice").textContent.includes("配置字段不完整")'),
     "malformed import feedback");
   assert.equal(await evaluate('document.getElementById("profile").value'),"default");
+  // The first page exposes direct preset activation and an immediate follow switch.
+  await evaluate(`document.querySelector('[data-page="workspace"]').click()`);
+  assert.equal(await evaluate('document.querySelectorAll("#scene-presets [data-scene-preset]").length'),6);
+  assert.equal(await evaluate(`document.querySelector('[data-scene-preset="default"]').getAttribute("aria-pressed")`),"true");
+  await evaluate('document.getElementById("home-follow-enabled").click()');
+  await until(async()=>(await (await fetch(origin+"/api/config")).json()).auto_follow.enabled,"home follow switch persistence");
+  await until(()=>evaluate('!document.querySelector(".scene-preset").disabled'),"home follow change completed");
+  assert.equal(await evaluate('document.getElementById("home-follow-state").textContent'),"已开启");
+  assert.equal(await evaluate('document.getElementById("follow-enabled").checked'),true);
+  await evaluate('document.getElementById("home-follow-details").click()');
+  assert.equal(await evaluate('document.getElementById("settings").hidden'),false);
+  assert.equal(await evaluate('document.activeElement.id'),"follow-settings");
+  await evaluate(`document.querySelector('[data-page="workspace"]').click()`);
+  await evaluate(`document.querySelector('[data-scene-preset="codex-cli"]').click()`);
+  await until(async()=>{
+    const config=await (await fetch(origin+"/api/config")).json();
+    return config.active_profile==="codex-cli"&&!config.auto_follow.enabled;
+  },"home preset activation disables following");
+  await until(()=>evaluate(`document.querySelector('[data-scene-preset="codex-cli"]').getAttribute("aria-pressed")==="true"`),"home active preset highlight");
+  assert.equal(await evaluate('document.getElementById("profile").value'),"codex-cli");
+  assert.equal(await evaluate('document.getElementById("home-follow-enabled").checked'),false);
+  assert.equal(await evaluate('document.getElementById("follow-enabled").checked'),false);
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.deepEqual(saved.profiles.default.layers[1].bindings.top.single,{type:"shortcut",keys:"RIGHTALT",mode:"hold",label:"fcitx5-vinput"});
+  await until(()=>evaluate('!document.querySelector(".scene-preset").disabled'),"home preset change completed");
+  // An uninstalled scene is created with the current voice binding and immediately activated.
+  await evaluate(`document.querySelector('[data-scene-preset="workbuddy-dispatch"]').click()`);
+  await until(async()=>(await (await fetch(origin+"/api/config")).json()).active_profile==="workbuddy-dispatch","home creates and activates a missing preset");
+  await until(()=>evaluate('document.getElementById("profile").value==="workbuddy-dispatch" && !document.querySelector(".scene-preset").disabled'),"home switch completion");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.equal(saved.profiles["workbuddy-dispatch"].layers[0].bindings.top.single.keys,saved.profiles["codex-cli"].layers[0].bindings.top.single.keys);
+  await evaluate(`document.querySelector('[data-scene-preset="default"]').click()`);
+  await until(()=>evaluate(`document.querySelector('[data-scene-preset="default"]').getAttribute("aria-pressed")==="true"`),"home default selection");
+  // A rejected save restores the previous selection and leaves the quick controls usable.
+  await until(()=>evaluate('!document.querySelector(".scene-preset").disabled'),"home default save completion");
+  await evaluate(`(()=>{
+    const original=window.fetch;
+    window.fetch=(url,options)=>{
+      if(url==="/api/config"&&options?.method==="PUT"){
+        window.fetch=original;
+        return Promise.resolve(new Response(JSON.stringify({error:"测试保存失败"}),{status:400}));
+      }
+      return original(url,options);
+    };
+    document.querySelector('[data-scene-preset="claude-code"]').click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("notice").textContent==="测试保存失败"'),"home save failure feedback");
+  assert.equal(await evaluate('document.getElementById("profile").value'),"default");
+  assert.equal(await evaluate(`document.querySelector('[data-scene-preset="default"]').getAttribute("aria-pressed")`),"true");
+  assert.equal(await evaluate('document.querySelector(".scene-preset").disabled'),false);
+  assert.equal((await (await fetch(origin+"/api/config")).json()).active_profile,"default");
+  await evaluate('document.getElementById("notice").hidden=true');
+  for(const [name,width,height] of [["desktop",1280,1000],["mobile",390,844]]) {
+    await cdp("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+    await evaluate('window.scrollTo(0,0)');await delay(150);
+    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,"scene selection "+name+" overflow");
+    const screenshot=await cdp("Page.captureScreenshot",{format:"png",captureBeyondViewport:true});
+    await writeFile(resolve("dist/previews/workspace-scenes-"+name+".png"),Buffer.from(screenshot.data,"base64"));
+  }
+  // Callouts and physical hit areas must share their vertical centres at every breakpoint.
+  for(const width of [1450,1280,1000,760,600,430,390,340]) {
+    await cdp("Emulation.setDeviceMetricsOverride",{width,height:1000,deviceScaleFactor:1,mobile:false});
+    await delay(60);
+    const layout=await evaluate(`(()=>{
+      const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+      const centre=r=>r.y+r.height/2;
+      const errors=["top","middle","bottom"].map(control=>Math.abs(centre(rect('[data-matrix="'+control+'"]'))-centre(rect('.physical.key-'+control))));
+      errors.push(Math.abs(centre(rect('[data-matrix="knob"]'))-centre(rect('.physical.dial'))));
+      const matrices=["top","middle","bottom"].map(control=>rect('[data-matrix="'+control+'"]'));
+      return {errors,overlap:matrices.some((r,i)=>i>0&&r.top<matrices[i-1].bottom),overflow:document.documentElement.scrollWidth>innerWidth};
+    })()`);
+    assert.equal(layout.overflow,false,"workbench overflow at "+width);
+    assert.equal(layout.overlap,false,"overlapping key callouts at "+width);
+    assert.ok(layout.errors.every(error=>error<1.5),"key alignment at "+width+": "+JSON.stringify(layout.errors));
+  }
   assert.deepEqual(exceptions,[]);
   assert.deepEqual(errors,[]);
-  console.log("Browser smoke passed: structured editor, key recorder, gesture overview, repeat, APP/macro library, macro Code/reordering, layers, persistence, SSE, rotation reversal, import recovery, responsive layout");
+  console.log("Browser smoke passed: device/callout alignment at eight viewport widths, structured editor, key recorder, gesture overview, repeat, APP/macro library, macro Code/reordering, layers, persistence, SSE, rotation reversal, import recovery, responsive layout");
   if(browser.exitCode!==null) throw new Error(browser.stderrText());
 } catch(error) {
   for(const process of children) console.error(process.stderrText());
