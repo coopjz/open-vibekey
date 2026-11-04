@@ -1,5 +1,25 @@
 # 本机 fcitx5-vinput 配置与使用
 
+> 本文是 Ubuntu 20.04 上已经完成的兼容部署与调试记录，包含不同阶段的模型、主题和排障过程。面向新用户的安装、provider 选择与硬件绑定流程，请从 [README 的语音配置](../README.md#语音输入推荐-fcitx5-vinput) 开始。
+>
+> 当前用户已在 vinput 中改用 **微信输入法 WeType provider**，并确认实际识别效果良好。下文 SenseVoice、X-ASR 与 OpenAI 的“默认”或“进行中”描述属于此前阶段，不代表当前所选后端。这里的微信 provider 由 vinput 调用，桌面文字交付仍使用 Fcitx5。
+
+## 当前 WeType 配置入口
+
+本机使用 Flatpak 和独立音频桥，应通过 `vibekey-vinput-gui` 打开设置，或使用 `vibekey-vinput` 封装代替原生 `vinput` 命令。可以在 GUI 的「资源 → ASR 提供商」中安装 WeType，在「控制」页选择；原始场景可直接使用识别结果。
+
+已部署对应资源后，以下命令可用于选择 WeType 和原始场景：
+
+```sh
+vibekey-vinput provider use provider.wetype.streaming
+vibekey-vinput scene use __raw__
+```
+
+该 provider 是联网识别，使用非官方客户端协议，录音会发送到微信输入法服务；当前不要求用户 API key 或微信登录。完整依赖和选项见 [provider 说明](https://github.com/xifan2333/vinput-registry/blob/main/resources/providers/wetype/streaming/README.md)。这些选择不会自动安装缺失的 provider，也不会改变 VibeKey 的右 Alt 保持按住绑定。
+
+以下保留部署时间线，便于维护音频桥、排查或恢复旧配置。`packaging/voice/` 是此兼容方案的模板，项目安装包尚未提供一键部署整个语音栈的安装器。
+
+
 2026-11-04，Ubuntu 20.04.6 / X11。保留系统版本和 PulseAudio，使用
 用户级 Flatpak Fcitx5 + vinput v2.4.2 完整版。离线语音已通过用户实测。
 
