@@ -43,4 +43,4 @@ GNOME Terminal 的固定窗口 role 分别为 `vibekey-codex` / `vibekey-claude`
 
 旧配置加载时自动补充关闭状态，默认方案设为原来的启用方案。当前用户已经启用两条 CLI 规则，并以原来的 Vinput 语音与音量方案作为默认回退。
 
-[实机验证记录](auto-follow-live-test.json)：在本机打开两个短时 GNOME Terminal 测试窗口，分别观察 `codex-cli → acceptance → claude-code → acceptance` 自动切换；未启动 CLI 代理或发送模型请求。另验证终端改变标题后 role 保持不变。Python 测试覆盖匹配、规则顺序、迁移、缺失引用、释放按键、默认回退和不写磁盘；浏览器测试覆盖添加、保存、编辑规则、幂等设置、手动关闭跟随和响应式布局。
+已用真实终端窗口验证 Codex CLI、Claude Code 和默认方案之间的自动切换；终端改变标题后，固定窗口标识仍可正常匹配。

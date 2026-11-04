@@ -9,3 +9,12 @@ build/
 !.env.example
 *.log
 
+
+# Local design experiments and reverse-engineering notes
+/model-test/
+/docs/rea/
+/docs/auto-follow-live-test.json
+/docs/ui-parity.md
+/docs/desktop-packaging.md
+/scripts/extract-studio-blocks.py
+/scripts/vinput-test-window.py

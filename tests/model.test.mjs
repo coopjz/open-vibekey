@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {newAction,setBinding,addProfile,shortcutFromEvent,resolveBinding,saveLibraryItem,libraryUsage,macroFromCode,macroToCode,validShortcut,activeVoiceBinding} from "../web/model.mjs";
+import {newAction,setBinding,addProfile,shortcutFromEvent,resolveBinding,saveLibraryItem,libraryUsage,macroFromCode,macroToCode,validShortcut,activeVoiceBinding,setRotationMode,rotationModeFor,rotationModes} from "../web/model.mjs";
 
 function config() {
   return {profiles:{default:{name:"Default",layers:Array.from({length:4},()=>({bindings:{top:{single:{type:"none"}}}}))}}};
@@ -90,4 +90,39 @@ test("preset voice copy resolves inherited bindings from the active layer",()=>{
   assert.deepEqual(binding,{single:{type:"shortcut",keys:"RIGHTALT",mode:"hold"}});
   binding.single.keys="CTRL+D";
   assert.equal(value.profiles.default.layers[0].bindings.top.single.keys,"RIGHTALT");
+});
+
+test("rotation modes preserve other controls, layers and profiles",()=>{
+  const value=config();addProfile(value,"terminal","Terminal","default");
+  const before=structuredClone(value);
+  setRotationMode(value,"terminal",0,"terminator-panes");
+  assert.equal(rotationModeFor(value,"terminal",0),"terminator-panes");
+  const bindings=value.profiles.terminal.layers[0].bindings;
+  assert.equal(bindings.cw.single.keys,"CTRL+SHIFT+N");
+  assert.equal(bindings.ccw.single.keys,"CTRL+SHIFT+P");
+  assert.deepEqual(bindings.top,before.profiles.terminal.layers[0].bindings.top);
+  assert.deepEqual(value.profiles.default,before.profiles.default);
+  assert.deepEqual(value.profiles.terminal.layers.slice(1),before.profiles.terminal.layers.slice(1));
+  bindings.cw.single.label="Changed";
+  assert.equal(rotationModeFor(value,"terminal",0),"terminator-panes");
+  assert.equal(rotationModes["terminator-panes"].cw.label,"下一个终端");
+  const snapshot=structuredClone(value);
+  assert.throws(()=>setRotationMode(value,"terminal",0,"invalid"));
+  assert.deepEqual(value,snapshot);
+});
+test("rotation mode detection resolves inheritance and rejects modified output",()=>{
+  const value=config();
+  setRotationMode(value,"default",0,"terminal-tabs");
+  assert.equal(value.profiles.default.layers[0].bindings.cw.single.keys,"CTRL+PAGEDOWN");
+  assert.equal(value.profiles.default.layers[0].bindings.ccw.single.keys,"CTRL+PAGEUP");
+  for(const control of ["cw","ccw"])setBinding(value,"default",1,control,"single",{type:"inherit"});
+  assert.equal(rotationModeFor(value,"default",1),"terminal-tabs");
+  value.profiles.default.layers[0].bindings.cw.single.repeat=2;
+  assert.equal(rotationModeFor(value,"default",1),"custom");
+  value.profiles.default.layers[0].bindings.cw.single.repeat=1;
+  value.profiles.default.layers[0].bindings.cw.single.mode="hold";
+  assert.equal(rotationModeFor(value,"default",0),"custom");
+  setRotationMode(value,"default",1,"volume");
+  assert.equal(rotationModeFor(value,"default",1),"volume");
+  assert.equal(rotationModeFor(value,"default",2),"custom");
 });

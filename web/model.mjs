@@ -192,3 +192,22 @@ export function addProfile(config, id, name, source) {
   config.profiles[id] = clone(config.profiles[source]);
   config.profiles[id].name = name;
 }
+
+// Rotation modes change only the two directions in the edited profile and layer.
+export const rotationModes = {
+  volume:{name:"音量",cw:{type:"volume",operation:"up"},ccw:{type:"volume",operation:"down"}},
+  "terminator-panes":{name:"Terminator 分屏",cw:{type:"shortcut",keys:"CTRL+SHIFT+N",label:"下一个终端"},ccw:{type:"shortcut",keys:"CTRL+SHIFT+P",label:"上一个终端"}},
+  "terminal-tabs":{name:"终端标签页",cw:{type:"shortcut",keys:"CTRL+PAGEDOWN",label:"下一个标签页"},ccw:{type:"shortcut",keys:"CTRL+PAGEUP",label:"上一个标签页"}}
+};
+export function setRotationMode(config,profile,layer,mode) {
+  const pair=rotationModes[mode];
+  if(!Object.hasOwn(rotationModes,mode))throw new Error("未知旋转功能");
+  for(const control of ["cw","ccw"])setBinding(config,profile,layer,control,"single",pair[control]);
+}
+export function rotationModeFor(config,profile,layer) {
+  return Object.keys(rotationModes).find(mode=>["cw","ccw"].every(control=>{
+    const action=resolveBinding(config,profile,layer,control,"single"),expected=rotationModes[mode][control];
+    return action?.type===expected.type && (action.type==="volume"?action.operation===expected.operation:
+      action.keys===expected.keys && (action.mode || "tap")==="tap" && (action.repeat ?? 1)===1);
+  })) || "custom";
+}

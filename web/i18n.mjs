@@ -1,5 +1,11 @@
 // UI language is a browser preference; configuration drafts remain untouched.
 const english = {
+  "旋钮旋转":"Knob rotation","旋钮旋转功能":"Knob rotation mode","自定义":"Custom",
+  "Terminator 分屏":"Terminator panes","终端标签页":"Terminal tabs","终端":"Terminal",
+  "下一个终端":"Next terminal","上一个终端":"Previous terminal",
+  "下一个标签页":"Next tab","上一个标签页":"Previous tab",
+  "顺时针下一个分屏，逆时针上一个；使用 Terminator 默认快捷键":"Clockwise: next pane; counterclockwise: previous pane. Uses Terminator default shortcuts.",
+  "顺时针下一个标签页，逆时针上一个；需终端支持 Ctrl + PageUp / PageDown":"Clockwise: next tab; counterclockwise: previous tab. Requires Ctrl + PageUp / PageDown support.",
   "设备键位配置":"Device key configuration","动作编辑":"Action editor",
   "选择场景预设":"Select a profile preset","详细设置 →":"Detailed settings →",
   "已开启":"On","手动选择场景预设":"Select a profile manually","默认回退方案":"Default fallback profile","自定义方案":"Custom profile",

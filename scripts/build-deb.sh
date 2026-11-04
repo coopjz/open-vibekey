@@ -29,12 +29,7 @@ cp README.md THIRD_PARTY.md "$task_stage/usr/share/doc/vibekey/"
 install -D -m 644 docs/images/workbench.png "$task_stage/usr/share/doc/vibekey/docs/images/workbench.png"
 install -D -m 644 docs/advanced-setup.md "$task_stage/usr/share/doc/vibekey/docs/advanced-setup.md"
 install -D -m 644 docs/fcitx5-vinput.md "$task_stage/usr/share/doc/vibekey/docs/fcitx5-vinput.md"
-install -D -m 644 docs/desktop-packaging.md "$task_stage/usr/share/doc/vibekey/docs/desktop-packaging.md"
 install -D -m 644 docs/auto-follow.md "$task_stage/usr/share/doc/vibekey/docs/auto-follow.md"
-install -D -m 644 docs/auto-follow-live-test.json "$task_stage/usr/share/doc/vibekey/docs/auto-follow-live-test.json"
-install -D -m 644 docs/ui-parity.md "$task_stage/usr/share/doc/vibekey/docs/ui-parity.md"
-mkdir -p "$task_stage/usr/share/doc/vibekey/docs/rea"
-cp docs/rea/*.md docs/rea/*.json "$task_stage/usr/share/doc/vibekey/docs/rea/"
 install -m 644 LICENSE "$task_stage/usr/share/doc/vibekey/copyright"
 cat > "$task_stage/DEBIAN/control" <<EOF
 Package: vibekey

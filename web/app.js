@@ -1,4 +1,4 @@
-import {controls, actionNames, clone, newAction, setBinding, addProfile, keyGroups, actionLabel, resolveBinding, ensureLibrary, libraryUsage, saveLibraryItem, validShortcut,validateActionDraft,activeVoiceBinding} from "/model.mjs";
+import {controls, actionNames, clone, newAction, setBinding, addProfile, keyGroups, actionLabel, resolveBinding, ensureLibrary, libraryUsage, saveLibraryItem, validShortcut,validateActionDraft,activeVoiceBinding,rotationModes,setRotationMode,rotationModeFor} from "/model.mjs";
 import {node,button,option,actionFields,macroEditor,recordShortcut,stopRecorders} from "/editors.mjs";
 import {sceneOverview} from "/scenes.mjs";
 import {followEditor} from "/follow.mjs";
@@ -10,7 +10,7 @@ let config, token, state, capabilities, profile, layer = 0, selected = "top";
 let dirty = false, rawSignal = null, previewTimer, refreshTimer, noticeTimer;
 let gesture="single", category="常用", search="", libraryDraft=null, libraryCategory="", macroDraftEditor=null;
 const gestureNames={single:"单击",double:"双击",hold:"长按"};
-const categories=["常用","字符","功能键","数字键盘","组合键","Layer","APP","宏","媒体","其他"];
+const categories=["常用","字符","功能键","数字键盘","组合键","终端","Layer","APP","宏","媒体","其他"];
 let currentPage="workspace";
 function showPage(page) {
   stopRecorders();currentPage=page;
@@ -188,6 +188,12 @@ function renderMatrix() {
 }
 function controlName(control) { return control==="top"?"上键":controls[control]; }
 function renderBindings() {
+  const rotation=$("rotation-mode");
+  rotation.replaceChildren();option(rotation,"custom","自定义");rotation.options[0].disabled=true;
+  for(const [id,mode] of Object.entries(rotationModes))option(rotation,id,mode.name);
+  rotation.value=rotationModeFor(config,profile,layer);
+  $("rotation-hint").textContent=rotation.value==="terminator-panes"?"顺时针下一个分屏，逆时针上一个；使用 Terminator 默认快捷键":rotation.value==="terminal-tabs"?"顺时针下一个标签页，逆时针上一个；需终端支持 Ctrl + PageUp / PageDown":"";
+
   if(gesture!=="single" && edgeAction(resolveBinding(config,profile,layer,selected,"single")))gesture="single";
   renderMatrix();
   $("control-title").textContent=controlName(selected);$("gesture-title").textContent=isRotation()?"转动":gestureNames[gesture];
@@ -241,6 +247,11 @@ function renderPalette() {
   if(category==="Layer")for(let index=0;index<4;index++){
     add(`TO(${index})`,{type:"layer",index},"切换到 Layer "+index);
     if(!isRotation()&&gesture==="single")add(`MO(${index})`,{type:"momentary_layer",index},"按住启用 Layer "+index);
+  }
+  else if(category==="终端"){
+    for(const mode of ["terminator-panes","terminal-tabs"])for(const control of ["ccw","cw"]){
+      const action=rotationModes[mode][control];add(action.label,action,rotationModes[mode].name+" · "+action.keys);
+    }
   }
   else if(category==="其他"){
     add("×",{type:"none"},"不执行动作");add("▽",{type:"inherit"},"继承底层");
@@ -415,6 +426,9 @@ $("read-device").onclick=guarded(async()=>{lightEditing=false;await api("/api/de
 $("apply-light").onclick=guarded(async()=>{
   await api("/api/device/lighting",{mode:Number($("light-mode").value),brightness:Number($("light-brightness").value)});
   lightEditing=false;await refresh();
+});
+$("rotation-mode").onchange=guarded(()=>{
+  stopRecorders();setRotationMode(config,profile,layer,$("rotation-mode").value);changed();renderBindings();
 });
 $("profile").onchange=() => { stopRecorders();profile=$("profile").value; renderProfiles(); renderBindings(); };
 $("layer").onchange=() => { stopRecorders();layer=Number($("layer").value);renderProfiles(); renderBindings(); };

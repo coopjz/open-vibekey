@@ -190,3 +190,8 @@ input::placeholder,textarea::placeholder {color:#7e8b87}
   .rotation-control .rotation-icon {font-size:17px}
   .rotation-count {font-size:9px;padding-left:3px}
 }
+
+.rotation-tools {display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:14px 0 0}
+.rotation-tools>label {font-size:12px;color:var(--muted)}
+.rotation-tools select {width:auto;max-width:100%;min-width:150px}
+.rotation-tools .muted {font-size:11px;line-height:1.6}

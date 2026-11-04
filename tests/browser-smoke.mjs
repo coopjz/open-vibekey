@@ -73,6 +73,25 @@ try {
   await until(()=>evaluate('document.getElementById("connection")?.textContent.includes("模拟模式")'),
     "UI initialization");
   assert.match(await evaluate('document.getElementById("dirty").textContent'),/配置已加载/);
+  // Paired rotation settings must persist without touching the voice/button bindings.
+  const beforeRotation=await (await fetch(origin+"/api/config")).json();
+  for(const [mode,cw,ccw] of [["terminator-panes","CTRL+SHIFT+N","CTRL+SHIFT+P"],["terminal-tabs","CTRL+PAGEDOWN","CTRL+PAGEUP"]]) {
+    await evaluate(`(()=>{
+      const select=document.getElementById("rotation-mode");
+      select.value=${JSON.stringify(mode)};select.dispatchEvent(new Event("change"));
+      document.getElementById("save").click();
+    })()`);
+    await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"rotation save").catch(async error=>{
+      console.error(await evaluate('JSON.stringify({notice:document.getElementById("notice").textContent,dirty:document.getElementById("dirty").textContent,mode:document.getElementById("rotation-mode").value})'));
+      throw error;
+    });
+    const persisted=await (await fetch(origin+"/api/config")).json();
+    const bindings=persisted.profiles.default.layers[0].bindings;
+    assert.equal(bindings.cw.single.keys,cw);assert.equal(bindings.ccw.single.keys,ccw);
+    assert.deepEqual(bindings.top,beforeRotation.profiles.default.layers[0].bindings.top);
+    await cdp("Page.reload");
+    await until(()=>evaluate('document.getElementById("dirty")?.textContent==="配置已加载" && document.getElementById("connection")?.textContent.includes("模拟模式") && document.getElementById("rotation-mode")?.value==='+JSON.stringify(mode)),"rotation reload");
+  }
   // Exercise the real binding editor, persistence, and simulated event stream.
   await evaluate(`(()=>{
     const select=document.querySelector("#bindings select");

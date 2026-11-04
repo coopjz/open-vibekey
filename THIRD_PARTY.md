@@ -15,7 +15,7 @@ AU05 HID 报告、默认键值、TEA 参数及物理按键事件的研究参考�
 0.2 工作台的布局与交互参照 `MrCroxx/olanzi`（Copyright © 2026 Croxx，MIT）
 提交 `eb78f88f973d4d28f1d6d3369cdfb65881b1e1c6`：
 VIA 风格键帽、六控件手势总览、Layer 选择、分类动作库和深灰/暖杏色配色。
-界面与运行逻辑为本项目独立实现，具体能力差异记录于 `docs/ui-parity.md`。
+界面与运行逻辑为本项目独立实现。
 
 以下为系统或用户单独安装的运行依赖，不包含在发行包中：
 
@@ -37,7 +37,7 @@ Ulanzi、VibeKey 和 AU05 名称仅用于说明硬件兼容性。
 `:/profileui/images/vibekey.png`，版权归原权利人所有，不适用本项目 MIT 许可。
 尚未发现允许再分发该图片的许可；当前用于用户请求的本地界面集成，
 公开发布包含此图片的版本前应取得许可或替换为自行制作的图片。
-文件身份、提取偏移及分析边界见 `docs/rea/studio-integration.md`。
+`docs/images/workbench.png` 中的设备插图适用相同的权利说明。
 
 fcitx5-vinput（https://github.com/xifan2333/fcitx5-vinput，GPL-3.0）作为用户
 独立安装的外部输入法插件接入；本项目仅提供右 Alt 按住快捷键预设，未复制
