@@ -1,0 +1,33 @@
+#!/bin/sh
+# Manage this user's Fcitx5/VibeKey stack. No credentials are printed.
+set -eu
+task_bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cli="$task_bin_dir/vibekey-vinput"
+case "${1:-status}" in
+  start|stop|restart) exec systemctl --user "$1" vibekey-voice.target ;;
+  settings) exec "$task_bin_dir/vibekey-vinput-gui" ;;
+  offline)
+    "$cli" provider use sherpa-onnx
+    exec systemctl --user restart vibekey-vinput.service
+    ;;
+  api)
+    python3 - <<'PY'
+import json,os,sys
+from pathlib import Path
+p=Path.home()/'.var/app/org.fcitx.Fcitx5/config/vinput/config.json'
+c=json.loads(p.read_text())
+a=next((a for a in c['asr']['providers'] if a['id']=='provider.openai-compatible.batch'),{})
+if not a.get('env',{}).get('VINPUT_ASR_API_KEY','').strip():
+    print('请先在 VibeKey 语音设置中填写 OpenAI API Key。',file=sys.stderr)
+    sys.exit(2)
+PY
+    "$cli" provider use oai-batch
+    exec systemctl --user restart vibekey-vinput.service
+    ;;
+  status)
+    systemctl --user --no-pager --plain is-active vibekey-input.service vibekey-voice-pipewire.service vibekey-voice-policy.service vibekey-vinput.service vibekey-fcitx5.service || true
+    "$cli" daemon status
+    exec "$cli" provider list
+    ;;
+  *) echo 'Usage: vibekey-voice {status|start|stop|restart|settings|offline|api}' >&2; exit 2 ;;
+esac

@@ -1,10 +1,11 @@
 export const controls = {top:"语音键", middle:"中键", bottom:"下键", knob:"旋钮按下", cw:"顺时针", ccw:"逆时针"};
-export const actionNames = {none:"无动作",inherit:"继承底层",shortcut:"快捷键",text:"输入文本",application:"启动应用",shell:"Shell 命令",volume:"音量",macro:"顺序宏",layer:"切换层",profile:"切换方案",momentary_layer:"按住切层",voice:"语音"};
+export const actionNames = {none:"无动作",inherit:"继承底层",shortcut:"快捷键",text:"输入文本",application:"启动应用",website:"打开网站",shell:"Shell 命令",volume:"音量",macro:"顺序宏",layer:"切换层",profile:"切换方案",momentary_layer:"按住切层",voice:"语音"};
 export function clone(value) { return JSON.parse(JSON.stringify(value)); }
 export function newAction(type) {
   switch(type) {
     case "shortcut": return {type, keys:"CTRL+C"};
     case "text": case "shell": return {type,value:""};
+    case "website": return {type,url:"https://example.com"};
     case "application": return {type,argv:["/usr/bin/true"]};
     case "volume": return {type,operation:"up"};
     case "macro": return {type,steps:[{type:"shortcut",keys:"CTRL+C"},{delay_ms:100}]};
@@ -48,6 +49,11 @@ export function validateActionDraft(action,macroStep=false) {
     if(!Number.isInteger(action.repeat ?? 1) || (action.repeat ?? 1)<1 || (action.repeat ?? 1)>20)throw new Error("重复次数必须为 1–20");
     if(action.mode==="hold" && (macroStep || (action.repeat ?? 1)!==1))throw new Error("宏步骤和重复输出不支持保持按住");
   }
+  if(action.type==="website"){
+    string(action.url,"网站地址");
+    let url;try{url=new URL(action.url);}catch{throw new Error("请输入完整的 HTTP(S) 网站地址");}
+    if(!/^https?:\/\/[^/?#]/i.test(action.url) || !["http:","https:"].includes(url.protocol) || !url.hostname || /[\s\x00-\x1f\x7f\\]/.test(action.url) || action.url.length>8192)throw new Error("请输入完整的 HTTP(S) 网站地址");
+  }
   if(action.type==="application"){
     if(!Array.isArray(action.argv)||!action.argv.length||!action.argv[0]?.trim()||action.argv.length>128)throw new Error("请输入有效的应用启动命令");
     for(const arg of action.argv)string(arg,"应用参数");
@@ -90,6 +96,7 @@ export function actionLabel(action) {
     case "voice":return {ptt:"按住说话",confirm:"确认文本",cancel:"取消转写"}[action.operation];
     case "profile":return action.id;
     case "text":return action.value || "文本";
+    case "website":return action.url || "网站";
     case "shell":return "Shell";
     default:return "—";
   }
@@ -147,7 +154,7 @@ export function macroFromCode(source) {
     if(match) {
       const step=JSON.parse(match[1]);
       if(!step || typeof step!=="object" || Array.isArray(step) ||
-        !["shortcut","application","text","volume","shell","layer","profile"].includes(step.type) ||
+        !["shortcut","application","website","text","volume","shell","layer","profile"].includes(step.type) ||
         step.mode==="hold")throw new Error("不支持的宏步骤");
       if(step.type==="shortcut" && !validShortcut(step.keys || ""))throw new Error("无效的快捷键");
       steps.push(step);continue;

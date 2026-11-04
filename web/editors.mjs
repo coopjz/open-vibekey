@@ -66,6 +66,9 @@ export function actionFields(parent,action,onChange,context={}) {
     const value=node("textarea");value.rows=3;value.value=action.value || "";
     value.onchange=()=>commit({value:value.value});
     field(stack,action.type==="text"?"要输入的文本":"Shell 命令",value);
+  } else if(action.type==="website") {
+    const url=input(action.url || "",url=>commit({url}));url.type="url";url.placeholder="https://example.com";
+    field(stack,"网站地址（HTTP / HTTPS）",url);
   } else if(action.type==="application") {
     field(stack,"可执行文件",input(action.argv?.[0] || "",value=>commit({argv:[value,...(action.argv || []).slice(1)]})));
     const args=node("textarea");args.rows=2;args.placeholder="每行一个参数，不经过 Shell";args.value=(action.argv || []).slice(1).join("\n");
@@ -159,7 +162,7 @@ export function macroEditor(parent,initial,onChange,context) {
           steps[index]={delay_ms:value};announce();
         },"number");delay.min="0";delay.max="30000";field(editor,"等待（毫秒）",delay);
       } else {
-        const options=["shortcut","application","text","volume","shell","layer","profile"].map(type=>[type,actionNames[type]]);
+        const options=["shortcut","application","website","text","volume","shell","layer","profile"].map(type=>[type,actionNames[type]]);
         const kind=select(step.type,options,type=>{steps[index]=newAction(type);announce();render();});field(editor,"步骤类型",kind);
         actionFields(editor,step,value=>{steps[index]=value;announce();render();},{...context,editMacro:undefined});
         if(step.type==="application" && context.library?.applications?.length) {

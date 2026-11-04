@@ -1,0 +1,7 @@
+[Unit]
+Description=VibeKey Fcitx5 voice input stack
+Wants=vibekey-input.service vibekey-voice-pipewire.service vibekey-voice-policy.service vibekey-vinput.service vibekey-fcitx5.service
+PartOf=graphical-session.target
+
+[Install]
+WantedBy=graphical-session.target

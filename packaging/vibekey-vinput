@@ -1,0 +1,3 @@
+#!/bin/sh
+# Optional fcitx5-vinput CLI using the isolated PulseAudio bridge.
+exec flatpak run --env=GTK_IM_MODULE=fcitx --env=QT_IM_MODULE=fcitx --env=XMODIFIERS=@im=fcitx --env=PIPEWIRE_REMOTE=pipewire-vibekey --command=/app/addons/Vinput/bin/vinput org.fcitx.Fcitx5 "$@"

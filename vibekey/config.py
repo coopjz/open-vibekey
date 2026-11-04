@@ -11,7 +11,7 @@ VERSION = 1
 CONTROLS = ("top", "middle", "bottom", "knob", "cw", "ccw")
 TRIGGERS = ("single", "double", "hold")
 ACTION_TYPES = (
-    "none", "shortcut", "text", "application", "shell", "volume",
+    "none", "shortcut", "text", "application", "website", "shell", "volume",
     "macro", "layer", "profile", "momentary_layer", "voice", "inherit",
 )
 
@@ -69,6 +69,17 @@ def validate_action(action, depth=0):
             _string(action[field], field, 100)
     if kind in ("text", "shell"):
         _string(action.get("value", ""), kind, 65536)
+    if kind == "website":
+        url = action.get("url")
+        _string(url, "website URL", 8192)
+        try:
+            parsed = urllib.parse.urlsplit(url)
+            valid_url = parsed.scheme.lower() in ("http", "https") and parsed.hostname
+            parsed.port
+        except ValueError:
+            valid_url = False
+        if not valid_url or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url) or "\\" in url:
+            raise ValueError("Website URL must be an absolute HTTP(S) URL")
     if kind == "shortcut":
         from .uinput import parse_shortcut
         parse_shortcut(action.get("keys", ""))

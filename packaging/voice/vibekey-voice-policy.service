@@ -1,0 +1,13 @@
+[Unit]
+Description=VibeKey isolated audio routing
+Requires=vibekey-voice-pipewire.service
+After=vibekey-voice-pipewire.service
+PartOf=vibekey-voice.target
+
+[Service]
+Environment=LD_LIBRARY_PATH=%h/.local/opt/vibekey-voice/pipewire/lib/x86_64-linux-gnu
+Environment=PIPEWIRE_REMOTE=pipewire-vibekey
+ExecStart=%h/.local/opt/vibekey-voice/pipewire/bin/pipewire-media-session
+Restart=on-failure
+RestartSec=3
+UMask=0077

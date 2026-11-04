@@ -70,3 +70,13 @@ test("macro Code round trips without executing arbitrary code",()=>{
     assert.throws(()=>macroFromCode(text));
   }
 });
+
+test("website URL validates and survives macro code round trip",async()=>{
+  const {validateActionDraft}=await import("../web/model.mjs");
+  const action={type:"website",url:"https://example.com/a?q=one%20two#part"};
+  assert.equal(newAction("website").type,"website");
+  validateActionDraft(action);
+  assert.deepEqual(macroFromCode(macroToCode([action])),[action]);
+  for(const url of ["example.com","file:///etc/passwd","javascript:alert(1)","https:///path","https://host/a b","https://host\\evil"])
+    assert.throws(()=>validateActionDraft({type:"website",url}));
+});

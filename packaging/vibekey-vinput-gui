@@ -1,0 +1,2 @@
+#!/bin/sh
+exec flatpak run --env=GTK_IM_MODULE=fcitx --env=QT_IM_MODULE=fcitx --env=XMODIFIERS=@im=fcitx --env=PIPEWIRE_REMOTE=pipewire-vibekey --command=/app/addons/Vinput/bin/vinput-gui org.fcitx.Fcitx5 "$@"

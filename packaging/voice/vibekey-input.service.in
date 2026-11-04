@@ -1,0 +1,11 @@
+[Unit]
+Description=VibeKey AU05 input and configuration service
+PartOf=vibekey-voice.target
+
+[Service]
+WorkingDirectory=@SOURCE_ROOT@
+ExecStart=/usr/bin/python3 -m vibekey --config %h/.config/vibekey/hardware-test.json
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=12
+UMask=0077

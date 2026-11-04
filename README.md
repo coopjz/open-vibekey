@@ -350,3 +350,22 @@ node tests/browser-smoke.mjs
 可通过 `CHROME` 指定 Chrome 可执行文件，通过 `PYTHON` 指定 Python。
 
 MIT 许可。上游研究来源与外部依赖见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+
+
+### Studio 本地集成
+
+键位工作台使用从用户提供的 Studio 安装包提取的 AU05 图片。
+在“其他”动作库或“动作类型”中选择“打开网站”，填写完整 HTTP(S) 地址，
+保存后由默认浏览器打开；同样可用于宏步骤和旋转动作。模拟模式不打开浏览器。
+图片来源与许可、逆向分析证据及未验证能力见 [Studio 集成记录](docs/rea/studio-integration.md)。
+
+### fcitx5-vinput 语音输入
+
+可在实体按键的“单击”槽选择“其他 → fcitx5-vinput”，保存后通过右 Alt
+按住事件调用外部输入法的按住说话。需先安装并配置 Fcitx5/vinput；
+该功能与内置语音后端独立。Ubuntu 20.04 的兼容性限制和部署步骤见
+[接入说明](docs/fcitx5-vinput.md)。
+
+fcitx5-vinput 可同时配置本地中文离线模型与 OpenAI 兼容 API，并在 vinput 中切换。
+本机已通过独立测试窗口的离线中文实测；普通桌面应用仍使用原输入法，
+尚未全局切换。API 提供商已安装，真实调用需用户配置凭据。

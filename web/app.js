@@ -173,7 +173,8 @@ function renderPalette() {
   }
   else if(category==="其他"){
     add("×",{type:"none"},"不执行动作");add("▽",{type:"inherit"},"继承底层");
-    add("文本",{type:"text",value:""});add("Shell",{type:"shell",value:""});
+    if(gesture==="single" && !isRotation())add("fcitx5-vinput",{type:"shortcut",keys:"RIGHTALT",mode:"hold",label:"fcitx5-vinput"},"按住说话，松开识别；需先启动 fcitx5-vinput");
+    add("打开网站",newAction("website"));add("文本",{type:"text",value:""});add("Shell",{type:"shell",value:""});
     if(gesture==="single")for(const operation of ["ptt","confirm","cancel"]){if(isRotation()&&operation==="ptt")continue;add({ptt:"按住说话",confirm:"确认文本",cancel:"取消转写"}[operation],{type:"voice",operation});}
     add("切换方案",{type:"profile",id:profile});
   }else{

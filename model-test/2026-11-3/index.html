@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#152d3b">
+  <title>云端急送 - 水豚火箭快递</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-rounded, "SF Pro Rounded", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #152d3b;
+      color: #f7f3e8;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+
+    body {
+      min-width: 320px;
+      background:
+        radial-gradient(ellipse at 48% 45%, rgba(62, 112, 116, .28), transparent 50%),
+        #152d3b;
+    }
+
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      isolation: isolate;
+      overflow: hidden;
+    }
+
+    .art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .topbar {
+      position: absolute;
+      z-index: 2;
+      inset: 28px 34px auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 12px;
+      background: rgba(20, 43, 53, .48);
+      color: #f4bd59;
+      box-shadow: 0 8px 24px rgba(8, 25, 34, .15);
+    }
+
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-size: 13px; font-weight: 800; letter-spacing: 0; }
+    .brand-sub { margin-top: 3px; color: #a9c1bc; font-size: 10px; font-weight: 600; }
+
+    .flight-state {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 13px;
+      border: 1px solid rgba(229, 241, 221, .17);
+      border-radius: 99px;
+      background: rgba(20, 43, 53, .45);
+      color: #d6e2d9;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f4bd59;
+      box-shadow: 0 0 12px rgba(244,189,89,.75);
+      animation: pulse 1.7s ease-in-out infinite;
+    }
+
+    .delivery-card {
+      position: absolute;
+      z-index: 2;
+      left: clamp(20px, 5vw, 78px);
+      bottom: clamp(26px, 6vh, 58px);
+      width: min(290px, calc(100vw - 40px));
+      padding: 17px 18px 16px;
+      border: 1px solid rgba(231, 240, 221, .14);
+      border-radius: 8px;
+      background: rgba(20, 43, 53, .62);
+      box-shadow: 0 18px 48px rgba(7, 24, 33, .2);
+      backdrop-filter: blur(14px);
+    }
+
+    .card-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #a9c1bc;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .order-number { color: #f4bd59; }
+    .destination { margin-top: 8px; font-size: 19px; font-weight: 800; }
+    .recipient { margin-top: 4px; color: #b6c8c1; font-size: 11px; }
+
+    .route {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+      color: #dfe8df;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .route-line {
+      position: relative;
+      flex: 1;
+      height: 1px;
+      background: rgba(213, 231, 211, .25);
+    }
+
+    .route-line::after {
+      position: absolute;
+      top: -2px;
+      left: 72%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #f4bd59;
+      content: "";
+      box-shadow: 0 0 10px rgba(244,189,89,.8);
+      animation: travel-dot 3.5s linear infinite;
+    }
+
+    .control {
+      position: absolute;
+      z-index: 3;
+      right: 34px;
+      bottom: 38px;
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid rgba(231, 240, 221, .23);
+      border-radius: 50%;
+      background: rgba(20, 43, 53, .65);
+      color: #f7f3e8;
+      cursor: pointer;
+      transition: background .2s ease, transform .2s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .control:hover { transform: translateY(-2px); background: rgba(48, 78, 83, .9); }
+    .control:focus-visible { outline: 2px solid #f4bd59; outline-offset: 3px; }
+    .control svg { width: 17px; height: 17px; }
+    .play-icon { display: none; }
+
+    .paused .motion,
+    .paused .flame,
+    .paused .spark,
+    .paused .live-dot,
+    .paused .route-line::after {
+      animation-play-state: paused !important;
+    }
+
+    .paused .pause-icon { display: none; }
+    .paused .play-icon { display: block; }
+
+    .motion { animation: flight 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .flame { transform-box: fill-box; transform-origin: 0% 50%; animation: flame 160ms ease-in-out infinite alternate; }
+    .spark { animation: spark 1.4s ease-in-out infinite; }
+    .spark.delay-1 { animation-delay: -.45s; }
+    .spark.delay-2 { animation-delay: -.9s; }
+
+    @keyframes flight {
+      0%, 100% { transform: translate(0, 0) rotate(-1.2deg); }
+      50% { transform: translate(8px, -17px) rotate(1deg); }
+    }
+
+    @keyframes flame {
+      from { transform: scaleX(.8) scaleY(.88); opacity: .78; }
+      to { transform: scaleX(1.12) scaleY(1.08); opacity: 1; }
+    }
+
+    @keyframes spark {
+      0%, 100% { opacity: .15; transform: translateY(5px) scale(.7); }
+      50% { opacity: .9; transform: translateY(-5px) scale(1); }
+    }
+
+    @keyframes pulse { 50% { opacity: .38; } }
+    @keyframes travel-dot { to { left: 96%; } }
+
+    @media (max-width: 620px) {
+      .topbar { inset: 18px 18px auto; }
+      .flight-state { padding: 9px 10px; font-size: 9px; }
+      .delivery-card { bottom: 22px; padding: 14px 15px; width: 250px; }
+      .destination { font-size: 17px; }
+      .control { right: 18px; bottom: 26px; }
+      .brand-sub { display: none; }
+      .brand-name { font-size: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="scene" id="scene">
+    <svg class="art" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="scene-title scene-desc">
+      <title id="scene-title">水豚骑着火箭穿越城市送外卖</title>
+      <desc id="scene-desc">黄昏的城市上空，一只戴着头盔的水豚骑着红色小火箭，带着外卖飞向目的地。</desc>
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0.82" y2="1">
+          <stop offset="0" stop-color="#31586a"/>
+          <stop offset=".48" stop-color="#55847d"/>
+          <stop offset="1" stop-color="#e7a36b"/>
+        </linearGradient>
+        <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
+          <stop stop-color="#f2bf7b" stop-opacity=".02"/>
+          <stop offset="1" stop-color="#f2bf7b" stop-opacity=".47"/>
+        </linearGradient>
+        <linearGradient id="rocket-body" x1="0" y1="0" x2="0" y2="1">
+          <stop stop-color="#f9f0d9"/>
+          <stop offset="1" stop-color="#d8d2bd"/>
+        </linearGradient>
+        <linearGradient id="flame-fill" x1="0" y1="0" x2="1" y2="0">
+          <stop stop-color="#ffe981"/>
+          <stop offset=".45" stop-color="#ff9b51"/>
+          <stop offset="1" stop-color="#ed5b45" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="bag-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop stop-color="#f0bf57"/>
+          <stop offset="1" stop-color="#d98a3e"/>
+        </linearGradient>
+        <pattern id="window-pattern" width="52" height="58" patternUnits="userSpaceOnUse">
+          <rect x="12" y="14" width="9" height="15" rx="2" fill="#ffd486" opacity=".64"/>
+          <rect x="31" y="14" width="9" height="15" rx="2" fill="#d9e5bd" opacity=".25"/>
+          <rect x="12" y="39" width="9" height="11" rx="2" fill="#d9e5bd" opacity=".2"/>
+          <rect x="31" y="39" width="9" height="11" rx="2" fill="#ffd486" opacity=".4"/>
+        </pattern>
+        <pattern id="window-pattern-2" width="44" height="50" patternUnits="userSpaceOnUse">
+          <rect x="10" y="12" width="8" height="13" rx="2" fill="#e9d291" opacity=".45"/>
+          <rect x="27" y="12" width="8" height="13" rx="2" fill="#accac1" opacity=".2"/>
+          <rect x="10" y="34" width="8" height="10" rx="2" fill="#accac1" opacity=".24"/>
+          <rect x="27" y="34" width="8" height="10" rx="2" fill="#f8c477" opacity=".5"/>
+        </pattern>
+        <filter id="soft-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="18"/>
+        </filter>
+      </defs>
+
+      <rect width="1440" height="900" fill="url(#sky)"/>
+      <rect y="460" width="1440" height="440" fill="url(#horizon)"/>
+
+      <circle cx="1132" cy="245" r="118" fill="#f2c779" opacity=".15" filter="url(#soft-glow)"/>
+      <circle cx="1132" cy="245" r="72" fill="#f6d594" opacity=".92"/>
+      <circle cx="1132" cy="245" r="93" fill="none" stroke="#f7dca5" stroke-opacity=".23"/>
+      <path d="M1040 245h184M1132 153v184M1067 180l130 130M1197 180l-130 130" stroke="#ffe3a5" stroke-opacity=".18" stroke-width="1"/>
+
+      <g fill="none" stroke="#d7e6cc" stroke-linecap="round" opacity=".43">
+        <path d="M107 214h86m-58-13h38m780 78h112m-42-13h65M277 345h69m-37-13h34" stroke-width="2"/>
+        <path d="M89 608h102m-47-13h58m1003-152h72m-25-13h42" stroke-width="1.5" opacity=".5"/>
+      </g>
+
+      <g fill="#e6efda" opacity=".74">
+        <circle cx="192" cy="159" r="2"/><circle cx="350" cy="224" r="1.7"/><circle cx="704" cy="141" r="2"/>
+        <circle cx="860" cy="214" r="1.5"/><circle cx="1280" cy="389" r="2"/><circle cx="983" cy="364" r="1.6"/>
+        <circle cx="476" cy="352" r="1.6"/><circle cx="1330" cy="126" r="1.7"/><circle cx="590" cy="186" r="1.2"/>
+      </g>
+
+      <g fill="#e9b181" opacity=".24">
+        <path d="M-30 555c65-58 124-66 184-21 45-46 118-32 133 18 61-10 97 16 96 52H-30z"/>
+        <path d="M878 496c51-46 104-49 146-10 39-33 97-21 110 18 50-6 78 13 82 43H878z"/>
+      </g>
+
+      <g opacity=".6" fill="#274b58">
+        <path d="M0 616h110v-82h60v82h56V498h74v118h77v-55h52v55h38v-99h92v99h79v-73h54v73h84v-130h79v130h70v-61h70v61h72v-110h80v110h95v284H0z"/>
+      </g>
+      <g opacity=".52" fill="url(#window-pattern-2)">
+        <path d="M0 616h110v-82h60v82h56V498h74v118h77v-55h52v55h38v-99h92v99h79v-73h54v73h84v-130h79v130h70v-61h70v61h72v-110h80v110h95v284H0z"/>
+      </g>
+
+      <g fill="#1d3d4b">
+        <path d="M0 708h72V620h87v88h64V573h102v135h74v-91h70v91h67v-139h102v139h70v-77h91v77h67V584h90v124h69v-91h99v91h67v-127h93v127h67v192H0z"/>
+        <path d="M191 708V567l49-48 52 48v141zM1006 708V547l39-40 40 40v161z"/>
+      </g>
+      <g fill="url(#window-pattern)" opacity=".81">
+        <path d="M0 708h72V620h87v88h64V573h102v135h74v-91h70v91h67v-139h102v139h70v-77h91v77h67V584h90v124h69v-91h99v91h67v-127h93v127h67v192H0z"/>
+      </g>
+
+      <g fill="#183542">
+        <path d="M0 810h184v-45h98v45h95V706h114v104h94v-51h81v51h89v-87h108v87h86v-49h119v49h91v-99h93v99h88v90H0z"/>
+      </g>
+      <g fill="#f5c779" opacity=".48">
+        <path d="M17 830h17v8H17zm44 0h17v8H61zm111 0h17v8h-17zm239-96h19v12h-19zm34 0h19v12h-19zm376 38h19v12h-19zm33 0h19v12h-19zm396-40h19v12h-19zm35 0h19v12h-19z"/>
+      </g>
+      <path d="M0 810c174-22 284 15 433 0 159-17 246-25 399-2 193 29 392-24 608 0v92H0z" fill="#17333f"/>
+
+      <g transform="translate(1070 555)">
+        <path d="M0 84h183v86H0z" fill="#e6c68b"/>
+        <path d="M-12 83h207l-17-30H8z" fill="#f3d9a5"/>
+        <path d="M12 91h161v79H12z" fill="#f1c77b"/>
+        <path d="M-3 82h191" stroke="#ac7956" stroke-width="8"/>
+        <path d="M32 75v-30h24v30m92 0V41h24v34" fill="#456b69"/>
+        <path d="M42 112h30v58H42zm81 0h30v58h-30z" fill="#4f7770"/>
+        <path d="M17 170h145v11H17z" fill="#c78d5c"/>
+        <path d="M24 182h133v8H24z" fill="#e3b86e"/>
+        <path d="M84 106v-24m0 0-12 12m12-12 12 12" fill="none" stroke="#fff1c9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <path d="M-50 739C202 623 349 637 506 552s270-116 418-112 298-62 552-180" fill="none" stroke="#f7dc9e" stroke-width="2" stroke-dasharray="3 13" opacity=".52"/>
+      <path d="M-50 749C196 634 349 650 509 563s272-116 413-114 308-65 554-183" fill="none" stroke="#f5c779" stroke-width="1" opacity=".14"/>
+
+      <g transform="translate(322 394)">
+        <path class="spark" d="M0 0l5 9 9 5-9 5-5 9-5-9-9-5 9-5z" fill="#ffdf92"/>
+        <path class="spark delay-1" d="M140 78l4 7 7 4-7 4-4 7-4-7-7-4 7-4z" fill="#f8d28c"/>
+      </g>
+      <g transform="translate(997 308)">
+        <path class="spark delay-2" d="M0 0l4 7 7 4-7 4-4 7-4-7-7-4 7-4z" fill="#fff0bd"/>
+      </g>
+
+      <g class="motion">
+        <ellipse cx="736" cy="627" rx="190" ry="21" fill="#183744" opacity=".23"/>
+
+        <g transform="translate(0 -3)">
+          <path class="flame" d="M570 505c-74-8-135 3-202 30 54-3 84 10 110 27-43 2-79 18-107 41 82-11 149-7 213 4z" fill="url(#flame-fill)"/>
+          <path d="M568 528c-48-3-91 10-135 31 44-8 81 0 113 14z" fill="#fff0a4" opacity=".9"/>
+
+          <path d="M607 494l-47-47c-9-9-24-4-26 8l-8 64z" fill="#d65c4c" stroke="#a9413b" stroke-width="5" stroke-linejoin="round"/>
+          <path d="M610 555l-69 22c-12 4-15 20-4 29l47 40z" fill="#d65c4c" stroke="#a9413b" stroke-width="5" stroke-linejoin="round"/>
+
+          <path d="M576 477c60-80 143-139 220-148 60-7 112 13 140 45-19 67-77 139-151 190-65 45-145 70-210 66-35-2-61-19-68-47-8-30 20-71 69-106z" fill="url(#rocket-body)" stroke="#aeb3a7" stroke-width="5"/>
+          <path d="M626 456c54-60 122-106 179-119 43-10 77-4 99 10-24 55-71 111-130 152-55 39-121 63-173 65-28 1-46-8-50-25-4-19 23-52 75-83z" fill="#fbf2dd" opacity=".75"/>
+
+          <path d="M668 551c49-2 104-25 150-55 39-25 73-59 99-94" fill="none" stroke="#d65c4c" stroke-width="16" stroke-linecap="round"/>
+          <path d="M687 568c53-4 105-27 150-55" fill="none" stroke="#f0bd58" stroke-width="6" stroke-linecap="round"/>
+
+          <path d="M817 405c14-29 38-50 62-56 22-5 42 6 49 25 6 18-2 43-21 65-20 22-50 37-72 33-18-3-28-18-26-34 1-10 4-22 8-33z" fill="#d85d4e" stroke="#a9413b" stroke-width="5"/>
+          <path d="M830 399c11-19 28-32 44-36 15-4 27 2 31 14 4 12-2 28-15 42-14 15-34 24-48 21-13-2-19-11-17-22 1-6 3-13 5-19z" fill="#8dd3d4" stroke="#f6ead0" stroke-width="8"/>
+          <path d="M841 393c11-14 25-23 37-26" fill="none" stroke="#e7ffff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+
+          <g transform="rotate(-14 715 420)">
+            <path d="M646 424c2-65 31-111 82-119 47-8 79 24 79 71l-13 84-117 18z" fill="#9a6042"/>
+            <path d="M661 402c1-45 22-79 58-85 36-5 59 19 58 56l-11 63-100 10z" fill="#ad714d"/>
+            <path d="M670 363c-5-24-1-44 10-49 13-6 27 12 32 35z" fill="#9a6042"/>
+            <path d="M735 347c5-24 18-40 31-37 14 4 17 25 9 48z" fill="#9a6042"/>
+            <path d="M679 365c-1-17 2-29 8-31 7-2 14 8 18 23z" fill="#e3a38a"/>
+            <path d="M744 353c4-16 10-27 17-26 7 2 8 14 3 29z" fill="#e3a38a"/>
+            <ellipse cx="716" cy="387" rx="53" ry="49" fill="#b67b55"/>
+            <path d="M695 405c7-17 23-26 39-22 17 4 28 18 28 36-17 16-43 22-64 13-8-6-9-17-3-27z" fill="#d69b72"/>
+            <ellipse cx="751" cy="404" rx="15" ry="12" fill="#302b2a"/>
+            <ellipse cx="756" cy="401" rx="4" ry="3" fill="#f5dfb2"/>
+            <ellipse cx="697" cy="383" rx="4" ry="5" fill="#272728"/>
+            <ellipse cx="737" cy="379" rx="4" ry="5" fill="#272728"/>
+            <path d="M708 428c9 6 19 7 28 2" fill="none" stroke="#82543d" stroke-width="3" stroke-linecap="round"/>
+
+            <path d="M668 358c0-37 25-61 63-66 40-5 73 14 85 49l-13 7c-16-23-40-32-68-27-24 4-40 18-47 42z" fill="#447b78" stroke="#294e54" stroke-width="5"/>
+            <path d="M678 353c18-19 43-28 68-27 19 1 36 7 50 18" fill="none" stroke="#c7e1c7" stroke-width="4" opacity=".8"/>
+            <path d="M702 323l13-11 12 9-5 12z" fill="#f4bd59"/>
+            <path d="M712 326l7-7" stroke="#fff2c4" stroke-width="3" stroke-linecap="round"/>
+
+            <path d="M683 435c-23 7-34 25-32 42 2 13 13 20 28 18l32-12-5-28z" fill="#9a6042"/>
+            <path d="M751 432c23 3 37 18 38 34 1 12-8 20-22 20l-36-8 2-28z" fill="#9a6042"/>
+            <path d="M658 474l46 9m38-8 43-1" stroke="#5c3d31" stroke-width="5" stroke-linecap="round"/>
+          </g>
+
+          <g transform="rotate(-14 824 393)">
+            <path d="M793 367c5-25 24-41 47-43 20-2 38 9 44 27l-5 46-79 10-12-19z" fill="url(#bag-fill)" stroke="#a76838" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M811 359c4-16 16-25 30-26 14-1 25 6 30 18" fill="none" stroke="#7f5a39" stroke-width="7" stroke-linecap="round"/>
+            <path d="M820 365l50-6" stroke="#ffdc82" stroke-width="4" stroke-linecap="round"/>
+            <path d="M836 379l16 10-16 10z" fill="#fff0c4"/>
+            <path d="M824 410l55-7" stroke="#b46f3b" stroke-width="4" stroke-linecap="round"/>
+          </g>
+        </g>
+      </g>
+
+      <g fill="#f6c879" opacity=".35">
+        <circle cx="454" cy="590" r="2"/><circle cx="488" cy="568" r="1.5"/><circle cx="532" cy="551" r="2.2"/>
+        <circle cx="552" cy="538" r="1.4"/><circle cx="505" cy="590" r="1.3"/>
+      </g>
+      <rect width="1440" height="900" fill="none" stroke="#0b202b" stroke-opacity=".18" stroke-width="26"/>
+    </svg>
+
+    <header class="topbar" aria-label="云端急送">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M5 16.5c.5-4.8 3.5-8.8 9.3-11.5-.2 4-1.8 7.1-4.8 9.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8.1 14.2c2.4-.2 4.4.7 5.9 2.7M5.3 18.5c1.8-.8 3.6-1 5.4-.6m6.4-7.8 1.5 1.5M5 5l1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="17.6" cy="6.4" r="2.2" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">云端急送</div>
+          <div class="brand-sub">SKY COURIER · 夜航专线</div>
+        </div>
+      </div>
+      <div class="flight-state"><span class="live-dot"></span>正在飞行 · 预计 00:03</div>
+    </header>
+
+    <section class="delivery-card" aria-label="配送信息">
+      <div class="card-heading"><span>正在配送</span><span class="order-number">订单 #042</span></div>
+      <div class="destination">河岸街 18 号</div>
+      <div class="recipient">送给：晚归的林小姐</div>
+      <div class="route"><span>松果厨房</span><span class="route-line"></span><span>目的地</span></div>
+    </section>
+
+    <button class="control" id="motion-toggle" type="button" aria-label="暂停动画" aria-pressed="false" title="暂停动画">
+      <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 5v14M16 5v14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m8 5 11 7-11 7z" fill="currentColor"/>
+      </svg>
+    </button>
+  </main>
+  <script>
+    const scene = document.getElementById("scene");
+    const toggle = document.getElementById("motion-toggle");
+
+    toggle.addEventListener("click", () => {
+      const paused = scene.classList.toggle("paused");
+      toggle.setAttribute("aria-pressed", String(paused));
+      toggle.setAttribute("aria-label", paused ? "继续动画" : "暂停动画");
+      toggle.setAttribute("title", paused ? "继续动画" : "暂停动画");
+    });
+  </script>
+</body>
+</html>

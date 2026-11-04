@@ -29,3 +29,16 @@ VIA 风格键帽、六控件手势总览、Layer 选择、分类动作库和深�
 
 Ulanzi、VibeKey 和 AU05 名称仅用于说明硬件兼容性。
 
+
+## 本地提取的 Studio 图片
+
+`web/assets/studio/vibekey.png` 提取自用户提供的
+`Win_Ulanzi_Studio_V3.4.8.20261027.exe`，资源路径
+`:/profileui/images/vibekey.png`，版权归原权利人所有，不适用本项目 MIT 许可。
+尚未发现允许再分发该图片的许可；当前用于用户请求的本地界面集成，
+公开发布包含此图片的版本前应取得许可或替换为自行制作的图片。
+文件身份、提取偏移及分析边界见 `docs/rea/studio-integration.md`。
+
+fcitx5-vinput（https://github.com/xifan2333/fcitx5-vinput，GPL-3.0）作为用户
+独立安装的外部输入法插件接入；本项目仅提供右 Alt 按住快捷键预设，未复制
+其源码、模型或二进制。安装要求与本机限制见 `docs/fcitx5-vinput.md`。

@@ -1,0 +1,14 @@
+[Unit]
+Description=VibeKey fcitx5-vinput daemon in Flatpak
+Requires=vibekey-voice-policy.service
+After=vibekey-voice-policy.service
+PartOf=vibekey-voice.target
+
+[Service]
+Type=dbus
+BusName=org.fcitx.Vinput
+ExecStart=/usr/bin/flatpak run --env=PIPEWIRE_REMOTE=pipewire-vibekey --command=/app/addons/Vinput/bin/vinput-daemon org.fcitx.Fcitx5
+ExecStop=/usr/bin/pkill -TERM -x vinput-daemon
+Restart=on-failure
+RestartSec=3
+UMask=0077

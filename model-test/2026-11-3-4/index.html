@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>豚豚速递 · 宇宙热乎送达</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap');
+:root{--ink:#322d29;--paper:#f9f4e8;--orange:#ed643d;--speed:1;--play:running}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif}button{font:inherit;cursor:pointer}header{height:94px;max-width:1440px;margin:auto;padding:0 5.5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #322d2920}.brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:23px;letter-spacing:-1px}.brand-icon{width:40px;height:40px;background:var(--orange);border-radius:50%;display:grid;place-items:center;color:white;font-size:23px;transform:rotate(-12deg)}.brand small{font-size:9px;letter-spacing:2px;display:block;margin-top:2px;font-weight:600}.nav{display:flex;gap:32px;font-size:12px;align-items:center}.live{display:flex;align-items:center;gap:7px}.dot{width:6px;height:6px;border-radius:50%;background:#7a9167;box-shadow:0 0 0 4px #7a916717}.edition{border:1px solid #322d2940;border-radius:30px;padding:8px 14px;font-size:10px;letter-spacing:1px}main{max-width:1440px;margin:auto;padding:45px 5.5% 0}.intro{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:29px}.eyebrow{font-size:10px;font-weight:700;letter-spacing:3px;margin-bottom:14px;color:#8a7464}.eyebrow span{color:var(--orange);margin-right:10px}h1{margin:0;font-size:clamp(32px,4.2vw,59px);font-weight:900;letter-spacing:-2px;line-height:1.2}h1 em{font-style:normal;color:var(--orange)}.intro p{font-size:12px;line-height:1.9;color:#8b8177;margin:0 0 4px;max-width:250px}.stage{position:relative;overflow:hidden;border:1px solid #d8ccbb;border-radius:18px;background:#f2dfba;isolation:isolate}.scene{display:block;width:100%;height:auto;min-height:360px;max-height:650px;aspect-ratio:2.14;object-fit:cover}.hud{position:absolute;top:25px;left:26px;font-size:10px;letter-spacing:1px;z-index:2}.hud-top{display:flex;gap:8px;align-items:center;font-weight:700}.hud-top b{background:#fff9e9bd;padding:7px 10px;border:1px solid #b49b7f40;border-radius:5px}.coordinates{margin-top:10px;color:#8d7861;font-size:9px;letter-spacing:2px}.stamp{position:absolute;right:26px;top:25px;writing-mode:vertical-rl;font-size:10px;letter-spacing:4px;color:#9c7b5c}.ground-note{position:absolute;bottom:22px;left:26px;font-size:10px;color:#927c65;letter-spacing:2px}.sound{position:absolute;bottom:20px;right:24px;background:#fff7e3a8;border:1px solid #bda98d;border-radius:50%;width:35px;height:35px;display:grid;place-items:center;font-size:15px}.sound:hover{background:#fff7e3}.controls{display:flex;justify-content:space-between;align-items:center;padding:22px 0 24px;border-bottom:1px solid #322d2920;gap:15px}.flight-status{display:flex;gap:13px;align-items:center}.flight-icon{width:38px;height:38px;border-radius:50%;border:1px solid #d6cbb9;display:grid;place-items:center;color:var(--orange)}.flight-status strong{display:block;font-size:12px;font-weight:700}.flight-status small{display:block;font-size:9px;letter-spacing:1.5px;color:#a09284;margin-top:5px}.buttons{display:flex;align-items:center;gap:10px}.buttons button{border:1px solid #cfc2af;background:transparent;border-radius:8px;padding:10px 16px;font-size:11px;display:flex;gap:9px;align-items:center}.buttons button:hover{background:#efe5d3}.buttons .primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}.buttons .primary:hover{background:#514238}.footer{display:flex;justify-content:space-between;align-items:center;padding:23px 0 28px;font-size:10px;color:#998b7b;letter-spacing:.5px}.footer .motto{color:#6e6256}.footer span b{color:var(--orange)}
+.rider{animation:float calc(3s / var(--speed)) ease-in-out infinite;transform-origin:650px 320px}.flame{animation:flame calc(.16s / var(--speed)) ease-in-out infinite alternate;transform-origin:430px 372px}.flame-small{animation:flame calc(.12s / var(--speed)) ease-in-out infinite alternate-reverse;transform-origin:431px 372px}.scarf{animation:scarf calc(.6s / var(--speed)) ease-in-out infinite alternate;transform-origin:596px 273px}.steam{animation:steam calc(2.4s / var(--speed)) ease-out infinite}.steam.two{animation-delay:-1.2s}.speedline{animation:streak calc(1.5s / var(--speed)) linear infinite}.speedline.s2{animation-delay:-.7s}.speedline.s3{animation-delay:-1.1s}.clouds-far{animation:drift calc(70s / var(--speed)) linear infinite}.clouds-near{animation:drift calc(38s / var(--speed)) linear infinite}.spark{animation:twinkle 2s ease-in-out infinite alternate}.spark.two{animation-delay:-1s}.orbit{animation:orbit calc(5s / var(--speed)) ease-in-out infinite}.delivery-ping{animation:ping 2s ease-out infinite;transform-origin:1025px 344px}.eye{animation:blink 5s infinite;transform-origin:648px 219px}.animated,.animated *{animation-play-state:var(--play)!important}.boost .rider{filter:drop-shadow(-8px 6px 14px #ee8e3d55)}.toast{position:absolute;bottom:60px;left:50%;transform:translate(-50%,15px);padding:11px 18px;background:#322d29;color:#fff5df;border-radius:30px;font-size:11px;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}.toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes float{0%,100%{transform:translate(0,0) rotate(-2deg)}50%{transform:translate(0,-15px) rotate(1deg)}}@keyframes flame{from{transform:scaleX(.85) scaleY(.9)}to{transform:scaleX(1.18) scaleY(1.08)}}@keyframes scarf{from{transform:skewY(-4deg)}to{transform:skewY(5deg)}}@keyframes steam{0%{opacity:0;transform:translateY(3px)}30%{opacity:.65}100%{opacity:0;transform:translate(6px,-26px)}}@keyframes streak{0%{transform:translateX(140px);opacity:0}15%,75%{opacity:.7}100%{transform:translateX(-220px);opacity:0}}@keyframes drift{to{transform:translateX(-1200px)}}@keyframes twinkle{from{opacity:.3}to{opacity:1}}@keyframes orbit{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}@keyframes blink{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.1)}}@keyframes ping{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}
+@media(max-width:650px){header{height:75px}.nav .live{display:none}.nav{gap:0}.brand{font-size:19px}.edition{font-size:8px}main{padding-top:30px}.intro{display:block}.intro p{margin-top:16px;max-width:none;font-size:11px}h1{letter-spacing:-1px}.scene{width:165%;max-width:none;margin-left:-34%;min-height:370px}.hud{top:16px;left:16px}.stamp{right:15px;top:18px}.ground-note{left:16px;font-size:8px;letter-spacing:1px}.controls{align-items:flex-start;flex-direction:column}.buttons{width:100%}.buttons button{flex:1;justify-content:center}.footer{font-size:8px;gap:20px;line-height:1.8}.flight-status small{font-size:8px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="brand-icon">↗</div><div>豚豚速递<small>CAPY EXPRESS</small></div></div><nav class="nav"><span class="live"><i class="dot"></i> 全宇宙营业中</span><span class="edition">EST. 2026 / 地球分部</span></nav></header>
+<main>
+<div class="intro"><div><div class="eyebrow"><span>●</span> 一份外卖，一场宇宙漫游</div><h1>生活慢慢来，<br>外卖<em>飞着来。</em></h1></div><p>你的专属水豚骑手已出发。<br>穿过云朵和晚风，把热乎送到你手中。</p></div>
+<section class="stage" aria-label="水豚骑火箭穿过云朵，送出热腾腾外卖的动画">
+<div class="hud"><div class="hud-top"><b>↗ 配送进行中</b><span>订单 #CP-0086</span></div><div class="coordinates">地球 → 你的小宇宙</div></div><div class="stamp">热爱生活 · 准时开饭</div>
+<svg class="scene animated" viewBox="0 0 1200 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="scene-title scene-desc">
+<title id="scene-title">水豚宇宙外卖员</title><desc id="scene-desc">戴橙色头盔的水豚骑着绿色火箭，背着外卖箱，飞过奶油色云海与山丘。</desc>
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#f0dfc0"/><stop offset="1" stop-color="#f9e9c9"/></linearGradient>
+ <linearGradient id="rocket" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#65978c"/><stop offset=".5" stop-color="#4d8077"/><stop offset="1" stop-color="#34625e"/></linearGradient>
+ <linearGradient id="fire"><stop stop-color="#e86b38" stop-opacity="0"/><stop offset=".6" stop-color="#ef8a40"/><stop offset="1" stop-color="#ffe4a0"/></linearGradient>
+ <pattern id="grain" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".6" fill="#907450" opacity=".07"/><circle cx="4" cy="4" r=".4" fill="#907450" opacity=".06"/></pattern>
+ <g id="cloud"><path d="M0 35C0 18 19 10 34 17C35-8 78-9 83 15C101 4 126 16 123 33C146 29 158 43 153 52H-12C-19 44-10 34 0 35" fill="#fff6df"/></g>
+ <g id="star" stroke="#b99a70" stroke-width="1.5"><path d="M-6 0H6M0-6V6"/></g>
+</defs>
+<path fill="url(#sky)" d="M0 0h1200v560H0z"/>
+<circle cx="908" cy="143" r="68" fill="#f1c780" opacity=".65"/><circle cx="908" cy="143" r="83" fill="none" stroke="#dcb779" stroke-opacity=".25"/>
+<g class="clouds-far" opacity=".58"><use href="#cloud" x="120" y="110" transform="scale(.8)"/><use href="#cloud" x="760" y="30"/><use href="#cloud" x="1350" y="110" transform="scale(.8)"/><use href="#cloud" x="1960" y="30"/></g>
+<g fill="none" stroke="#bea17d" opacity=".35"><ellipse cx="650" cy="298" rx="355" ry="159" stroke-dasharray="3 8" transform="rotate(-12 650 298)"/><path d="M75 350Q475 105 1090 239" stroke-dasharray="3 8"/></g>
+<g class="spark"><use href="#star" x="333" y="160"/><use href="#star" x="973" y="245"/><use href="#star" x="800" y="79"/></g><g class="spark two"><use href="#star" x="213" y="307"/><use href="#star" x="765" y="396"/><use href="#star" x="1060" y="137"/></g>
+<g opacity=".4" stroke="#b89a70" fill="none"><circle cx="275" cy="218" r="3"/><circle cx="850" cy="300" r="3"/><circle cx="711" cy="112" r="2"/><path d="M142 245h5m-2.5-2.5v5M1090 295h5m-2.5-2.5v5"/></g>
+<path d="M0 464Q120 390 255 459T528 467T830 449T1200 438V560H0" fill="#d7c8a0"/>
+<path d="M0 490Q155 448 290 496T623 476T945 492T1200 466V560H0" fill="#b4bda0"/>
+<g fill="#94a78d" opacity=".8"><path d="M80 480v-42h18v42m7 0v-65h26v65m9 0v-33h22v33M988 482v-57h22v57m9 0v-83h30v83m8 0v-38h18v38"/><path d="M1027 399v-12h4v12" stroke="#94a78d" stroke-width="2"/></g>
+<path d="M0 533Q230 474 443 533T873 522T1200 515V560H0" fill="#7f9c86"/>
+<g class="clouds-near"><use href="#cloud" x="-40" y="381" transform="scale(1.3)"/><use href="#cloud" x="809" y="318" transform="scale(1.3)"/><use href="#cloud" x="1160" y="381" transform="scale(1.3)"/><use href="#cloud" x="2009" y="318" transform="scale(1.3)"/></g>
+<g class="speedline" stroke="#ba9b72" stroke-width="2" stroke-linecap="round"><path d="M285 283h83m-50 11h23"/></g><g class="speedline s2" stroke="#ba9b72" stroke-width="2" stroke-linecap="round"><path d="M796 349h82m-26 13h33"/></g><g class="speedline s3" stroke="#ba9b72" stroke-width="2" stroke-linecap="round"><path d="M360 413h68"/></g>
+<!-- The entire courier is a hand-drawn, animated SVG group. -->
+<g class="rider" stroke="#583e2c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+ <g class="flame" stroke="none"><path d="M437 350Q372 342 278 382Q362 374 321 398Q396 390 441 390Z" fill="url(#fire)"/><path d="M437 360Q389 361 352 379Q394 373 378 387L440 380" fill="#f9cb67"/></g>
+ <g class="flame-small" stroke="none"><path d="M438 365L389 377L437 381Z" fill="#fff1bf"/></g>
+ <!-- far fin and engine -->
+ <path d="M514 341Q481 296 452 315L462 360" fill="#db7049"/><path d="M452 346L426 350L428 391L458 394Z" fill="#638477"/><path d="M435 351L437 390" fill="none" stroke="#345e55" stroke-width="5"/>
+ <!-- delivery bag -->
+ <path d="M477 225L548 212L561 293L482 303Z" fill="#c55232"/><path d="M477 225L459 235L465 310L482 303Z" fill="#a4452c"/><path d="M459 235L477 225L548 212L529 208L458 220Z" fill="#f39b64"/>
+ <path d="M479 226L549 215L550 231L481 244Z" fill="#e47b48"/><path d="M493 217L491 203Q503 196 514 200L518 212" fill="none" stroke-width="5"/>
+ <g transform="rotate(-9 517 265)" stroke="#fff1d2" stroke-width="2"><circle cx="517" cy="264" r="17" fill="none"/><path d="M508 263h18m-16-5h14l-2 13h-10Z" fill="none"/><path d="M514 253v-4m6 4v-4"/></g>
+ <path d="M486 290l62-10" stroke="#f5b479" stroke-width="2"/>
+ <!-- body, saddle and legs -->
+ <path d="M551 252Q521 279 526 319Q529 344 566 345L627 331L621 272Z" fill="#b98c5e"/><path d="M541 272Q530 294 542 314" fill="none" stroke="#cba275" stroke-width="6"/>
+ <path d="M568 326Q574 349 604 346L629 341L625 327L594 327L587 309" fill="#a97b51"/>
+ <path d="M548 339L624 335L641 345L548 353Z" fill="#714e39"/>
+ <!-- rocket hull -->
+ <path d="M456 345Q583 309 711 333Q759 344 789 368Q758 402 706 412Q568 431 457 396Q468 374 456 345Z" fill="url(#rocket)"/>
+ <path d="M468 351Q583 324 704 344" fill="none" stroke="#a6bbb0" stroke-width="3"/>
+ <path d="M710 333Q761 343 789 368Q765 398 714 410Q734 373 710 333Z" fill="#e2784e"/>
+ <path d="M745 347Q767 356 778 368" fill="none" stroke="#f7ac75" stroke-width="3"/>
+ <ellipse cx="652" cy="372" rx="28" ry="29" fill="#e5ce9e"/><ellipse cx="652" cy="372" rx="19" ry="20" fill="#abc7bd"/><path d="M641 373l18-13m-11 22l15-11" stroke="#e8f2d9" stroke-width="3"/>
+ <path d="M531 392Q494 412 494 445Q538 440 571 409Z" fill="#d86e46"/><path d="M503 435l31-24" stroke="#f19a69" stroke-width="2"/>
+ <path d="M481 369l54-6m-50 18l34-3" stroke="#c0c5a5" stroke-width="2"/><g fill="#e7d5ad" stroke="none"><circle cx="568" cy="349" r="2"/><circle cx="694" cy="349" r="2"/><circle cx="695" cy="399" r="2"/></g>
+ <text x="559" y="391" font-family="sans-serif" font-size="12" font-weight="700" letter-spacing="2" fill="#e6dec0" stroke="none" transform="rotate(-2 559 391)">CP–01</text>
+ <!-- capybara head -->
+ <path d="M568 203Q558 216 564 252Q566 278 606 285Q646 288 675 271Q697 264 697 244Q696 230 675 227L649 205Z" fill="#c69b6b"/>
+ <path d="M659 231Q684 224 696 238Q704 249 693 261Q678 270 657 263" fill="#d3ad7e" stroke="none"/>
+ <ellipse cx="684" cy="238" rx="5" ry="3" fill="#583e2c" stroke="none"/>
+ <g class="eye"><path d="M644 230q5 4 9-1" fill="none" stroke-width="3.5"/></g><path d="M680 256q-7 5-13 0" fill="none" stroke-width="2"/>
+ <ellipse cx="644" cy="249" rx="9" ry="5" fill="#d58e68" stroke="none" opacity=".65"/>
+ <!-- helmet -->
+ <path d="M557 218Q550 168 596 163Q640 161 654 202L661 213Q622 205 557 225Z" fill="#e47748"/>
+ <path d="M588 165Q617 178 624 211L611 213Q603 179 578 170" fill="#f6d79f" stroke="none"/>
+ <path d="M554 222Q603 207 662 212L668 219Q603 214 556 230Z" fill="#f49a62"/>
+ <path d="M572 220Q560 203 573 198Q588 195 591 213" fill="#b58b5e"/>
+ <path d="M576 216q-7-11 0-11" fill="none" stroke="#8f623e" stroke-width="2"/>
+ <path d="M563 232l10 30 19 6" fill="none" stroke="#78513b" stroke-width="3"/>
+ <!-- fluttering scarf -->
+ <g class="scarf"><path d="M592 268Q560 253 536 265Q519 274 499 261L504 281Q527 298 553 280L589 281Z" fill="#e56c42"/><path d="M535 274q-14 8-27 1" stroke="#f59a67" stroke-width="2"/></g>
+ <path d="M588 266Q600 273 610 272L607 283L590 282Z" fill="#ef8550"/>
+ <!-- handlebar and paws -->
+ <path d="M680 337l-4-42-18-10" fill="none" stroke="#4b5345" stroke-width="5"/><path d="M648 285l21-3" stroke="#714f35" stroke-width="8"/>
+ <path d="M600 288Q612 308 640 300L660 290Q666 282 658 279Q651 277 645 283L627 287L615 275" fill="#c69b6b"/>
+ <path d="M652 281l3 7m-8-4l3 7" stroke-width="1.5"/>
+ <path d="M566 312Q558 342 587 359Q600 368 615 359Q620 349 607 347L594 340L598 318" fill="#c69b6b"/><path d="M599 352l-1 8m7-7l-1 7" stroke-width="1.5"/>
+ <g class="steam" fill="none" stroke="#fff7e1" stroke-width="2" opacity=".7"><path d="M510 194q-8-8 0-16q8-8 0-16"/></g><g class="steam two" fill="none" stroke="#fff7e1" stroke-width="2"><path d="M525 193q-8-8 0-16q8-8 0-16"/></g>
+</g>
+<!-- Next destination -->
+<g class="orbit"><path d="M1025 340v-39" stroke="#8f8663" stroke-width="1" stroke-dasharray="3 4"/><circle class="delivery-ping" cx="1025" cy="344" r="9" fill="none" stroke="#db7a4e"/><ellipse cx="1025" cy="344" rx="13" ry="4" fill="#d5a573" opacity=".4"/><path d="M1025 300s-18-20-18-31a18 18 0 0 1 36 0c0 11-18 31-18 31" fill="#e67a4c" stroke="#a85e39" stroke-width="1.5"/><path d="M1018 269l7-6 7 6v10h-14Z" fill="#fff0d0"/><path d="M1023 279v-6h4v6" fill="#e67a4c"/><rect x="975" y="356" width="100" height="25" rx="12" fill="#fff4da" stroke="#d4bd98"/><text x="1025" y="372" text-anchor="middle" fill="#947955" font-family="sans-serif" font-size="10">下一站：你家</text></g>
+<path fill="url(#grain)" d="M0 0h1200v560H0z" pointer-events="none"/>
+</svg>
+<span class="ground-note">✦ 今日宜：好好吃饭，放轻松。</span><button class="sound" id="cheer" title="给水豚加油" aria-label="给水豚加油">♡</button><div class="toast" id="toast" role="status">收到你的加油，豚豚元气 +100！</div>
+</section>
+<div class="controls"><div class="flight-status"><div class="flight-icon">↗</div><div><strong id="status">情绪稳定，正在飞行</strong><small>CAPYBARA ON A MISSION · 热乎指数 100%</small></div></div><div class="buttons"><button id="speed"><span>ϟ</span><span id="speed-label">加急一下</span></button><button class="primary" id="pause"><span id="pause-icon">Ⅱ</span><span id="pause-label">歇一小会</span></button></div></div>
+<footer class="footer"><span class="motto">不慌不忙的水豚，也有全力以赴的方向。</span><span>MADE WITH <b>♥</b> & A LITTLE ROCKET FUEL</span></footer>
+</main>
+<script>
+let paused=false,boosted=false,toastTimer;
+const root=document.documentElement,statusText=document.getElementById('status');
+function updateStatus(){statusText.textContent=paused?'云端小憩，马上回来':boosted?'火力全开，热乎加速中！':'情绪稳定，正在飞行'}
+document.getElementById('pause').addEventListener('click',()=>{paused=!paused;root.style.setProperty('--play',paused?'paused':'running');document.getElementById('pause-label').textContent=paused?'继续出发':'歇一小会';document.getElementById('pause-icon').textContent=paused?'▷':'Ⅱ';document.getElementById('pause').setAttribute('aria-pressed',String(paused));updateStatus()});
+document.getElementById('speed').addEventListener('click',()=>{boosted=!boosted;root.style.setProperty('--speed',boosted?'2.5':'1');document.body.classList.toggle('boost',boosted);document.getElementById('speed-label').textContent=boosted?'恢复慢悠悠':'加急一下';document.getElementById('speed').setAttribute('aria-pressed',String(boosted));updateStatus()});
+document.getElementById('cheer').addEventListener('click',()=>{const toast=document.getElementById('toast');toast.classList.add('show');document.getElementById('cheer').textContent='♥';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.classList.remove('show');document.getElementById('cheer').textContent='♡'},2600)});
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+context.properties = {
+ core.daemon = true
+ core.name = pipewire-vibekey
+ default.clock.rate = 48000
+}
+context.spa-libs = {
+ audio.convert.* = audioconvert/libspa-audioconvert
+ support.* = support/libspa-support
+}
+context.modules = [
+ { name = libpipewire-module-protocol-native }
+ { name = libpipewire-module-metadata }
+ { name = libpipewire-module-spa-device-factory }
+ { name = libpipewire-module-spa-node-factory }
+ { name = libpipewire-module-client-node }
+ { name = libpipewire-module-client-device }
+ { name = libpipewire-module-adapter }
+ { name = libpipewire-module-link-factory }
+ { name = libpipewire-module-access args = { access.force = unrestricted } }
+ { name = libpipewire-module-pulse-tunnel args = {
+    tunnel.mode = source
+    pulse.server.address = "unix:@PULSE_SOCKET@"
+    target.object = "@PULSE_SOURCE@"
+    audio.rate = 16000
+    audio.channels = 1
+    audio.position = [ MONO ]
+    stream.props = {
+      node.name = "vibekey-au05-microphone"
+      node.description = "VibeKey AU05 (PulseAudio bridge)"
+      media.class = "Audio/Source"
+      node.virtual = true
+    }
+ } }
+]
+context.objects = [
+ { factory = spa-node-factory args = {
+   factory.name = support.node.driver
+   node.name = Dummy-Driver
+   priority.driver = 20000
+ } }
+]

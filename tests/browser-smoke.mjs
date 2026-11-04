@@ -202,6 +202,21 @@ try {
   })()`);
   await until(()=>evaluate('document.documentElement.lang==="zh-CN" && document.querySelector(\'[data-page="workspace"]\').textContent.includes("键位")'),"Chinese interface");
   assert.equal(await evaluate('document.querySelector("#bindings textarea").value'),"draft survives language switch");
+  // Verify the new URL editor, persistence, and packaged device illustration.
+  const image=await fetch(origin+"/assets/studio/vibekey.png");
+  assert.equal(image.status,200);
+  assert.equal((await image.arrayBuffer()).byteLength,180751);
+  await evaluate(`(()=>{
+    document.querySelector('[data-key="打开网站"]').click();
+    const url=document.querySelector('#bindings input[type="url"]');
+    url.value="https://example.com/a?q=one%20two#part";
+    url.dispatchEvent(new Event("change"));
+    document.getElementById("save").click();
+  })()`);
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"website save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.deepEqual(saved.profiles.default.layers[1].bindings.top.single,
+    {type:"website",url:"https://example.com/a?q=one%20two#part"});
   // Collect rendered previews and verify layout on desktop and mobile.
   await mkdir(resolve("dist/previews"),{recursive:true});
   for (const [name,width,height] of [["desktop",1280,1000],["mobile",390,844]]) {
@@ -216,6 +231,14 @@ try {
     }
     await evaluate('document.querySelector(\'[data-page="workspace"]\').click()');
   }
+  // vinput uses a held Right Alt preset on physical buttons only.
+  await evaluate(`document.querySelector('[data-key="fcitx5-vinput"]').click()`);
+  assert.equal(await evaluate('document.querySelector("#bindings input").value'),"RIGHTALT");
+  await evaluate('document.getElementById("save").click()');
+  await until(()=>evaluate('document.getElementById("dirty").textContent==="已保存"'),"vinput preset save");
+  saved=await (await fetch(origin+"/api/config")).json();
+  assert.deepEqual(saved.profiles.default.layers[1].bindings.top.single,
+    {type:"shortcut",keys:"RIGHTALT",mode:"hold",label:"fcitx5-vinput"});
   // Malformed imports must leave the current editor usable.
   await evaluate(`(()=>{
     document.getElementById("config-json").value=JSON.stringify({

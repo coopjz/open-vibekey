@@ -1,0 +1,13 @@
+[Unit]
+Description=Fcitx5 desktop input with VibeKey voice
+After=vibekey-vinput.service
+PartOf=vibekey-voice.target
+
+[Service]
+Type=dbus
+BusName=org.fcitx.Fcitx5
+ExecStart=/usr/bin/flatpak run --env=XMODIFIERS=@im=fcitx --env=PIPEWIRE_REMOTE=pipewire-vibekey org.fcitx.Fcitx5 --replace --disable=ibusfrontend
+ExecStop=/usr/bin/gdbus call --session --dest org.fcitx.Fcitx5 --object-path /controller --method org.fcitx.Fcitx.Controller1.Exit
+Restart=on-failure
+RestartSec=3
+UMask=0077

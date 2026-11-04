@@ -119,5 +119,7 @@ class ActionRunner:
                 if cancelled.is_set():
                     return
                 self._process(action["argv"], cancelled)
+        elif kind == "website":
+            self._process(["xdg-open", action["url"]], cancelled)
         elif kind == "shell":
             self._process(["/bin/sh", "-c", action.get("value", "")], cancelled)

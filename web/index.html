@@ -30,7 +30,7 @@
           <button class="rotation-control" data-control="ccw"><span class="rotation-icon">↶</span><span><small data-i18n>逆时针</small><strong data-summary="ccw">—</strong></span><span class="rotation-count" id="ccw-count">0</span></button>
           <button class="rotation-control" data-control="cw"><span class="rotation-icon">↷</span><span><small data-i18n>顺时针</small><strong data-summary="cw">—</strong></span><span class="rotation-count" id="cw-count">0</span></button>
         </div>
-        <div class="hardware-wrap"><div class="device" aria-label="AU05 设备布局">
+        <div class="hardware-wrap"><div class="device studio-device" aria-label="AU05 设备布局">
           <span class="hardware-logo">ulanzi</span><div class="speaker-grille"><i></i><i></i><i></i><i></i><i></i></div>
           <button class="physical dial" data-control="knob" aria-label="旋钮按下"><span class="dial-face"><i></i><i></i><i></i><i></i></span><span class="dial-label">◉</span></button>
           <div class="hardware-keys"><button class="physical key-top" data-control="top" aria-label="上键"><span>◉</span></button><button class="physical key-middle" data-control="middle" aria-label="中键"><span>↵</span></button><button class="physical key-bottom" data-control="bottom" aria-label="下键"><span>×</span></button></div>
@@ -51,6 +51,7 @@
       <div class="save-bar"><div><span id="dirty">配置已加载</span><span class="save-hint" data-i18n>保存到本机后生效，关闭网页可继续使用</span></div><div><button id="discard" class="text-button" data-i18n>丢弃修改</button><button id="save" class="primary" data-i18n>保存到本机</button></div></div>
     </section>
     <section id="voice" class="panel page" hidden>
+      <div class="settings-card"><h3>fcitx5-vinput · <span data-i18n>本地 / API</span></h3><p data-i18n>使用 fcitx5-vinput：在键位页选择实体按键的单击槽，再从“其他”选择 fcitx5-vinput，保存后按住说话、松开识别。需先安装并启动 Fcitx5、vinput 和识别模型。结果由输入法提交到当前输入框。</p><p data-i18n>默认触发键为右 Alt；若已修改 vinput 热键，请同步修改快捷键。下方录音、确认和取消按钮用于内置语音，不控制 vinput。</p></div>
       <div class="section-title"><div><h2>语音输入</h2><p>为控件分配按住说话、确认和取消动作；下方配置录音与转写。</p></div><span class="pill" id="voice-status">空闲</span></div>
       <div class="form-grid">
         <label>转写后端<select id="voice-backend"><option value="command">外部可执行程序</option><option value="whisper">离线 whisper.cpp</option><option value="api">兼容 OpenAI 的 API</option></select></label>

@@ -195,6 +195,12 @@ class Runtime:
             "session": os.environ.get("XDG_SESSION_TYPE", "unknown"),
             "uinput_access": os.access("/dev/uinput", os.W_OK),
             "parec": bool(shutil.which("parec")),
+            "vinput": {
+                "fcitx5_on_path": bool(shutil.which("fcitx5")),
+                "cli_on_path": bool(shutil.which("vinput")),
+                "trigger": "RIGHTALT (held shortcut)",
+                "note": "PATH checks do not detect Flatpak or prove the addon is running",
+            },
             "whisper": bool(shutil.which(self.store.value["voice"]["whisper_executable"])),
             "automatic_paste": os.environ.get("XDG_SESSION_TYPE") == "x11",
             "application_focus": os.environ.get("XDG_SESSION_TYPE") == "x11" and bool(shutil.which("wmctrl")),
